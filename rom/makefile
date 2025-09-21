@@ -6,13 +6,13 @@ UF2=build/${PROJECT}.uf2
 ELF=build/${PROJECT}.elf
 MOUNT=/media/rp2040
 
-OBJS=rom.c
+OBJS=src/rom.cpp src/menu.cpp
 
 default_target: ${ELF}
 .PHONY : default_target
 
 make:
-	cmake -S . -B build -DPICO_SDK_PATH=pico-sdk/
+	cmake -S . -B build -DPICO_SDK_PATH=pico-sdk/ 
 
 ${ELF}: ${OBJS}
 	make -C build
@@ -20,7 +20,7 @@ ${ELF}: ${OBJS}
 mc: 	# mount and copy
 	sudo ./mntrp2040.sh
 	sudo cp ${UF2} ${MOUNT}
-#	sudo umount ${MOUNT}
+	sudo umount ${MOUNT}
 	
 
 upload: 
