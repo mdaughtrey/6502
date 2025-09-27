@@ -8,8 +8,7 @@ MOUNT=/media/rp2040
 
 OBJS=src/rom.cpp src/menu.cpp
 
-default_target: ${ELF}
-.PHONY : default_target
+.PHONY : make
 
 make:
 	cmake -S . -B build -DPICO_SDK_PATH=pico-sdk/ 

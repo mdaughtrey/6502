@@ -1,10 +1,15 @@
+#pragma once
+
 #include <stdint.h>
 
-typedef struct
-{
-    int key;
-    const char * help;
-    void (*fun)();
-}Command;
+namespace menu
+{   
+    typedef enum
+    {
+        COMMAND,
+        INTERACTIVE_INPUT
+    }InputState;
 
-void menu_handle(uint8_t input);
+    void handle(uint8_t input);
+    extern InputState state;
+}

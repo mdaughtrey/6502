@@ -18,7 +18,7 @@ int main()
         int8_t input = getchar_timeout_us(0);
         if (input != PICO_ERROR_TIMEOUT)
         {
-            menu_handle(input);
+            menu::handle(input);
         }
         gpio_put(LED_PIN, state);
         state = !state;
