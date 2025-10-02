@@ -1,6 +1,8 @@
 #!/usr/bin/bash
 
-read mnt<<<$(lsblk -JI 8 -o PATH,MAJ:MIN,MODEL,LABEL,PARTLABEL | jq '.blockdevices[] | select(.label == "RPI-RP2").path' | tr -d '"')
+# RPI-RP2 or
+# RP2350
+read mnt<<<$(lsblk -JI 8 -o PATH,MAJ:MIN,MODEL,LABEL,PARTLABEL | jq '.blockdevices[] | select(.label == "RP2350").path' | tr -d '"')
 echo $mnt
 if [[ "${mnt}" != "" ]]; then  mount $mnt /media/rp2040; exit 0; fi
 exit 1

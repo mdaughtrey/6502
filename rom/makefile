@@ -6,15 +6,19 @@ UF2=build/${PROJECT}.uf2
 ELF=build/${PROJECT}.elf
 MOUNT=/media/rp2040
 
-OBJS=src/rom.cpp src/menu.cpp
+OBJS=src/rom.cpp src/menu.cpp src/io_menu.cpp
 
-.PHONY : make
+.PHONY : compile
 
-make:
-	cmake -S . -B build -DPICO_SDK_PATH=pico-sdk/ 
 
-${ELF}: ${OBJS}
-	make -C build
+compile: 
+	PICO_SDK_PATH=~/dev/pico-sdk/ make -C build
+
+build:
+	cmake -S . -B build -DPICO_SDK_PATH=~/dev/pico-sdk/ 
+
+clean:
+	rm -rf build
 
 mc: 	# mount and copy
 	sudo ./mntrp2040.sh
