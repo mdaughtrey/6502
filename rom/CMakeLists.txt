@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.13...3.27)
-set (PICO_PLATFORM rp2350)
+# set (PICO_PLATFORM rp2350)
 include(pico_sdk_import.cmake)
 project(rom)
 pico_sdk_init()
 
-set (SOURCES src/rom.cpp src/menu.cpp src/cmd_io.cpp)
+set (SOURCES src/rom.cpp src/menu.cpp src/cmd_io.cpp src/rom_ram.cpp)
 # set (HEADER_FILES src/rom.h)
 add_executable(rom ${SOURCES})
 #pico_add_extra_outputs(rom)

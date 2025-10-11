@@ -3,6 +3,7 @@
 #include "hardware/gpio.h"
 #include <cstdio>
 #include <cmd_io.h>
+#include <rom_ram.h>
 
 #include <menu.h>
 
@@ -15,6 +16,7 @@ int main()
 //    gpio_set_dir(LED_PIN, 1);
     stdio_init_all();
     cmd_io::init();
+    rom_ram::init();
     while (1)
     {
         int8_t input = getchar_timeout_us(0);
@@ -22,6 +24,7 @@ int main()
         {
             menu::handle(input);
         }
+        cmd_io::loop();
 //        gpio_put(LED_PIN, state);
 //        state = !state;
 //        sleep_ms(101);
