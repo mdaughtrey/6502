@@ -1,22 +1,32 @@
+#include <iostream>
 #include <string>
 #include <stdint.h>
+#include <vector>
+#include <regex>
+#include "types.h"
 
 class Validator
 {
     public:
         std::string accumulator;
-        virtual bool validate(uint8_t input)
+        std::string pattern;
+        std::smatch matches;
+
+        Validator(std::string pattern_p) : pattern(pattern_p)
+        {
+        }
+
+        void accumulate(uint8_t input)
         {
             accumulator += input;
-            return true;
         }
 
-        virtual const char * expecting()
+        const char * expecting()
         {
-            return "";
+            return pattern.c_str();
         }
 
-        virtual std::string accumulated()
+        std::string accumulated()
         {
             return accumulator;
         }
@@ -24,108 +34,123 @@ class Validator
         {
             accumulator.clear();
         }
-};
 
-class NumericValidator : public Validator
-{
-    public:
-        bool validate(uint8_t input)
+        CommandInput validate(void)
         {
-            if (input >= '0' && input <= '9')
+            std::regex re(pattern);
+            CommandInput result;
+            printf("Validator: testing %s against %s\n", accumulator.c_str(), pattern.c_str());
+            if (std::regex_search(accumulator, matches, re))
             {
-                accumulator += input;
-                return true;
-            }
-            return false;
-        }
-        const char * expecting()
-        {
-            return "0-9";
-        }
-};
-
-class HexValidator : public Validator
-{
-    public:
-        bool validate(uint8_t input)
-        {
-            if ((input >= '0' && input <= '9') || (input >= 'A' && input <= 'F') || (input >= 'a' && input <= 'f'))
-            {
-                accumulator += input;
-                return true;
-            }
-            return false;
-        }
-
-        const char * expecting()
-        {
-            return "0-9A-Fa-f";
-        }
-};
-
-class AddrLenValidator : public Validator
-{
-    public:
-        HexValidator hex_validator = HexValidator();
-        bool validate(uint8_t input)
-        {
-            if (accumulator.length() < 4 && hex_validator.validate(input))
-            {
-                accumulator += input;
-                return true;
-            }
-            else if (accumulator.length() == 4 && input == '/')
-            {
-                accumulator += input;
-                return true;
-            }
-            else if (accumulator.length() > 4 && hex_validator.validate(input))
-            {
-                accumulator += input;
-                return true;
-            }
-            return false;
-        }
-
-        const char * expecting()
-        {
-            return "XXXX/XXXX";
-        }
-};
-
-class PinStateValidator : public Validator
-{
-    public:
-        bool validate(uint8_t input)
-        {
-            if (accumulator.empty())
-            {
-                if (input != 'i' && input != 'o')
+                for (auto iter = matches.begin(); iter != matches.end(); iter++)
                 {
-                    return false;
+                    result.push_back(iter->str());
                 }
             }
-            else if (accumulator.length() < 3)
-            {
-                if (input < '0' ||  input > '9')
-                {
-                    return false;
-                }
-            }
-            else if (accumulator.length() < 4)
-            {
-                if (input != '1' && input != '0')
-                {
-                    return false;
-                }
-            }
-
-            accumulator += input;
-            printf("Accumulator: %s\r\n", accumulator.c_str());
-            return true;
-        }
-        const char * expecting()
-        {
-            return "[Dir/Pin[/Value] (i|o)NN(1|0)";
+            return result;
         }
 };
+
+// class NumericValidator : public Validator
+// {
+//     public:
+//         bool validate(uint8_t input)
+//         {
+//             if (input >= '0' && input <= '9')
+//             {
+//                 accumulator += input;
+//                 return true;
+//             }
+//             return false;
+//         }
+//         const char * expecting()
+//         {
+//             return "0-9";
+//         }
+// };
+// 
+// class HexValidator : public Validator
+// {
+//     public:
+//         bool validate(uint8_t input)
+//         {
+//             if ((input >= '0' && input <= '9') || (input >= 'A' && input <= 'F') || (input >= 'a' && input <= 'f'))
+//             {
+//                 accumulator += input;
+//                 return true;
+//             }
+//             return false;
+//         }
+// 
+//         const char * expecting()
+//         {
+//             return "0-9A-Fa-f";
+//         }
+// };
+// 
+// class AddrLenValidator : public Validator
+// {
+//     public:
+//         HexValidator hex_validator = HexValidator();
+//         bool validate(uint8_t input)
+//         {
+//             if (accumulator.length() < 4 && hex_validator.validate(input))
+//             {
+//                 accumulator += input;
+//                 return true;
+//             }
+//             else if (accumulator.length() == 4 && input == '/')
+//             {
+//                 accumulator += input;
+//                 return true;
+//             }
+//             else if (accumulator.length() > 4 && hex_validator.validate(input))
+//             {
+//                 accumulator += input;
+//                 return true;
+//             }
+//             return false;
+//         }
+// 
+//         const char * expecting()
+//         {
+//             return "XXXX/XXXX";
+//         }
+// };
+// 
+// class PinStateValidator : public Validator
+// {
+//     public:
+//         bool validate(uint8_t input)
+//         {
+//             if (accumulator.empty())
+//             {
+//                 if (input != 'i' && input != 'o')
+//                 {
+//                     return false;
+//                 }
+//             }
+//             else if (accumulator.length() < 3)
+//             {
+//                 if (input < '0' ||  input > '9')
+//                 {
+//                     return false;
+//                 }
+//             }
+//             else if (accumulator.length() < 4)
+//             {
+//                 if (input != '1' && input != '0')
+//                 {
+//                     return false;
+//                 }
+//             }
+// 
+//             accumulator += input;
+//             printf("Accumulator: %s\r\n", accumulator.c_str());
+//             return true;
+//         }
+//         const char * expecting()
+//         {
+//             return "[Dir/Pin[/Value] (i|o)NN(1|0)";
+//         }
+// };

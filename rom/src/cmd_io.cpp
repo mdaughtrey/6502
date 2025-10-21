@@ -4,105 +4,110 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <list>
+#include <utility>
 #include <deque>
 
 #include "hardware/structs/sio.h"
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"
 #include "hardware/pwm.h"
+#include "types.h"
 #include "cmd_io.h"
+#include "cmd_io_internal.h"
 #include "rom_ram.h"
 #include "pin_defs.h"
 
 namespace cmd_io
 {
-    const uint64_t ADDR_MASK = 0x000000000000ffff;
-    const uint32_t ADDR_MASK_HI = 0x00000000;
-    const uint32_t ADDR_MASK_LO = 0x0000ffff;
-    const uint64_t DATA_MASK = 0x0000ff0000000000;
-    const uint32_t DATA_MASK_HI = 0x0000ff00;
-    const uint32_t DATA_MASK_LO = 0x00000000;
-    void set_databus_dir(bool out);
-    bool cmd_pin_status(std::string value);
+    void set_databus_out(bool out);
+    void set_address_bus_out(bool out);
+    bool cmd_pin_status(CommandInput input);
     void pin_status(void);
-    void memory_operation(void);
-    std::deque<void (*)(void)> task_queue;
-
+//    void memory_operation(void);
+    void run_clocked_tasks(void);
+    void assert_address_bus(uint16_t addr);
+    void assert_databus(uint8_t data);
+//    std::deque<void (*)(void)> task_queue;
+    std::list<std::pair<std::string, void (*)(void)> > clocked_tasks;
     repeating_timer_t lfo_timer;
-    bool pin_state = false;
-    bool dump_pins_on_clock = false;
-    bool run_memory_operation = false;
+    bool clock_pin_state = true;
 
     void init(void)
     {
+         cmd_init_buses(CommandInput());
     }
 
-    bool cmd_init_buses(std::string)
+    bool cmd_init_buses(CommandInput input = CommandInput())
     {
-        for (auto ii = 0; ii < 16; ii++)
+        gpio_init(PIN_BUS_ENABLE);
+        gpio_set_dir(PIN_BUS_ENABLE, GPIO_OUT);
+        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+        for (auto ii = 0; ii < 64; ii++)
         {
-            gpio_init(ii);
-//            gpio_set_dir(ii, GPIO_IN);
-//            gpio_pull_up(ii);
+            if ((1 << ii) & (ADDR_MASK | DATA_MASK | CLOCK_MASK | RESET_MASK | RW_MASK))
+            {
+                gpio_init(ii);
+            }
         }
-        for (auto ii = 40; ii < 48; ii++)
-        {
-            gpio_init(ii);
-//            gpio_set_dir(ii, GPIO_IN);
-//            gpio_pull_up(ii);
-        }
-        gpio_init(PIN_RW);
- //       gpio_set_dir(PIN_RW, GPIO_IN);
-        ///gpio_pull_up(PIN_RW);
+        set_address_bus_out(false);
+        gpio_set_dir(PIN_CLOCK, GPIO_OUT);
+        gpio_put(PIN_CLOCK, 1);
+        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         return false;
     }
 
     void loop(void)
     {
-        if (!task_queue.empty())
-        {
-            task_queue.front()();
-            task_queue.pop_front();
-        }
+//        if (!gpio_get(PIN_CLOCK))
+//        {
+//            continue;
+//        }
+//        if (!task_queue.empty())
+//        {
+//            task_queue.front()();
+//            task_queue.pop_front();
+//        }
     }
 
     static bool lfo_timer_callback(repeating_timer_t *t)
     {
-        pin_state = !pin_state;
-        if (pin_state)
+        clock_pin_state = !clock_pin_state;
+        if (!clock_pin_state)
         {   
-            if (run_memory_operation)
-            {
-                task_queue.push_back(memory_operation);
-            }
-            if (dump_pins_on_clock)
-            {
-                task_queue.push_back(pin_status);
-            }
+            run_clocked_tasks();
         }
-        gpio_put(PIN_CLOCK, pin_state);
+        gpio_put(PIN_CLOCK, clock_pin_state);
         return true;
+    }
+
+    void run_clocked_tasks(void)
+    {
+//        printf("Run_clocked_tasks: %u tasks\r\n", clocked_tasks.size());
+        for (auto iter = clocked_tasks.begin(); iter != clocked_tasks.end(); iter++)
+        {
+            printf("%s\r\n", iter->first.c_str());
+            iter->second();
+        }
     }
 
     void set_clock_frequency_low(uint32_t frequency_hz)
     {
         float period = 1.0/static_cast<float>(frequency_hz)*500.0;
         printf("set_clock_frequency_low called with %u, period is %f\r\n", frequency_hz, period);
-        printf("Current pin function is %d\r\n", gpio_get_function(PIN_CLOCK));
         if (gpio_get_function(PIN_CLOCK) != GPIO_FUNC_SIO)
         {
             gpio_init(PIN_CLOCK);
             gpio_set_dir(PIN_CLOCK, GPIO_OUT);
         }
-        pin_state = false;
+        clock_pin_state = false;
         add_repeating_timer_ms(static_cast<uint32_t>(period), &lfo_timer_callback, NULL, &lfo_timer);
         printf("set_clock_frequency_returns\r\n");
     }
 
-    bool cmd_set_clock_frequency(std::string frequency)
+    bool cmd_set_clock_frequency(CommandInput input = CommandInput())
     {
-        printf("set_clock_frequency called with %s\r\n", frequency.c_str());
-        if (frequency.empty())
+        if (input.empty())
         {
             printf("Enter a frequency: ");
             return true;
@@ -112,7 +117,7 @@ namespace cmd_io
         
         uint32_t sys_clk = clock_get_hz(clk_usb);
         printf("sys_clk %u\r\n", sys_clk);
-        uint32_t frequency_hz = std::stof(frequency);
+        uint32_t frequency_hz = std::stof(input[1]);
         printf("Setting clock frequency to %u Hz\n", frequency_hz);
         if (frequency_hz < 1000)
         {
@@ -144,7 +149,6 @@ namespace cmd_io
         uint32_t frequency_hz = std::stoi(frequency);
         printf("Setting clock frequency to %u Hz\n", frequency_hz);
 
-        printf("Current pin function is %d\r\n", gpio_get_function(PIN_CLOCK));
         if (gpio_get_function(PIN_CLOCK) != GPIO_FUNC_PWM)
         {
             gpio_set_function(PIN_CLOCK, GPIO_FUNC_PWM);
@@ -176,76 +180,71 @@ namespace cmd_io
         return false;
     }
 
-    bool cmd_step_clock(std::string value)
+    bool cmd_step_clock(CommandInput input = CommandInput())
     {
-        printf("Current pin function is %d\r\n", gpio_get_function(PIN_CLOCK));
         if (gpio_get_function(PIN_CLOCK) != GPIO_FUNC_SIO)
         {
               gpio_init(PIN_CLOCK);
               gpio_set_dir(PIN_CLOCK, GPIO_OUT);
         }
+        set_databus_out(false);
         gpio_put(PIN_CLOCK, 0);
+        sleep_us(1);
+        uint64_t pins = gpioc_hilo_in_get();
+        if (pins & RW_MASK) // Read
+        {
+            run_clocked_tasks();
+        }
         gpio_put(PIN_CLOCK, 1);
+        sleep_us(1);
+        if (!(pins & RW_MASK)) // Write
+        {
+            run_clocked_tasks();
+        }
         return false;
 
     }
+    bool cmd_pin_status(CommandInput input = CommandInput())
+    {
+        pin_status();
+        return false;
+    }
+
+//    bool cmd_memory_operation(CommandInput input)
+//    {
+//        memory_operation();
+//        return false;
+//    }
+//
+//    void memory_operation(void)
+//    {
+//        set_databus_out(false);
+//        uint64_t pins = gpioc_hilo_in_get();
+//        uint16_t addr = pins & ADDR_MASK;
+//        if (pins & RW_MASK)
+//        {
+//            set_databus_out(true);
+//            uint8_t data = rom_ram::MEMORY[addr];
+//            printf("Reading %02x from address %04x\r\n", data, addr); 
+//            gpio_put_masked64(DATA_MASK, DATA_TO_MASK(data));
+////            sio_hw->gpio_togl = (sio_hw->gpio_out ^ static_cast<uint32_t>(data) & DATA_MASK_LO);
+////            sio_hw->gpio_hi_togl = (sio_hw->gpio_hi_out ^ static_cast<uint32_t>(data<<8) & DATA_MASK_HI);
+//        }
+//        else
+//        {
+//            set_databus_out(false);
+//            uint8_t data = MASK_TO_DATA(pins);
+//            printf("Writing %02x to address %04x\r\n", data, addr);
+//            rom_ram::MEMORY[addr] = data;
+//        }
+//    }
+
     void pin_status(void)
     {
-        cmd_pin_status("");
-    }
-
-    void memory_operation(void)
-    {
-        uint64_t pins =  gpioc_hilo_in_get();
-        uint16_t addr = pins & ADDR_MASK_LO;
-        if (pins & PIN_RW) // READ
-        {
-            set_databus_dir(true);
-            uint8_t data = addr >= rom_ram::RR_ROM_BASE ? rom_ram::ROM[addr - rom_ram::RR_ROM_BASE] : rom_ram::RAM[addr];
-            sio_hw->gpio_togl = (sio_hw->gpio_out ^ static_cast<uint32_t>(data) & DATA_MASK_LO);
-            sio_hw->gpio_hi_togl = (sio_hw->gpio_hi_out ^ static_cast<uint32_t>(data<<8) & DATA_MASK_HI);
-        }
-        else
-        {
-            set_databus_dir(false);
-            if (addr < rom_ram::RR_ROM_BASE)
-            {
-                rom_ram::RAM[addr] = (pins & DATA_MASK) >> 40;
-            }
-        }
-    }
-
-    bool cmd_pin_status(std::string value)
-    {
-//        uint64_t pins = gpio_get_all64();
-
-        printf("     Data          Addr                   Data                 R R     C      AddrH    AddrL\r\n");
-        printf(".... ..    .. .... .... ........ ........ ........ ........ ...w.S.. ..K..... FEDCBA98 76543210\r\n");
-//        printf("Via gpio_get_all64()\r\n");
-//        printf("%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s\r\n",
-//            static_cast<uint16_t>(pins >> 48), static_cast<uint8_t>(pins >> 40), static_cast<uint8_t>(pins >> 32),
-//            static_cast<uint16_t>(pins >> 16), static_cast<uint16_t>(pins), 
-//            std::bitset<8>(pins >> 56).to_string().c_str(), std::bitset<8>(pins >> 48).to_string().c_str(), 
-//            std::bitset<8>(pins >> 40).to_string().c_str(), std::bitset<8>(pins >> 32).to_string().c_str(), 
-//            std::bitset<8>(pins >> 24).to_string().c_str(), std::bitset<8>(pins >> 16).to_string().c_str(), 
-//            std::bitset<8>(pins >> 8).to_string().c_str(), std::bitset<8>(pins).to_string().c_str());
-//
-//        pins = 0;
-//        for (auto ii = 0; ii < 64; ii++)
-//        {
-//            pins |= gpio_get(ii) << ii;
-//        }
-//        printf("Via gpio_get individual\r\n");
-//        printf("%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s\r\n",
-//            static_cast<uint16_t>(pins >> 48), static_cast<uint8_t>(pins >> 40), static_cast<uint8_t>(pins >> 32),
-//            static_cast<uint16_t>(pins >> 16), static_cast<uint16_t>(pins), 
-//            std::bitset<8>(pins >> 56).to_string().c_str(), std::bitset<8>(pins >> 48).to_string().c_str(), 
-//            std::bitset<8>(pins >> 40).to_string().c_str(), std::bitset<8>(pins >> 32).to_string().c_str(), 
-//            std::bitset<8>(pins >> 24).to_string().c_str(), std::bitset<8>(pins >> 16).to_string().c_str(), 
-//            std::bitset<8>(pins >> 8).to_string().c_str(), std::bitset<8>(pins).to_string().c_str());
-
-        uint64_t pins =  gpioc_hilo_in_get();
-//        printf("Via gpio_hilo_in_get()\r\n");
+        printf("     Data          Addr                   Data               b R R     C      AddrH    AddrL\r\n");
+        printf(".... ..    .. .... .... ........ ........ ........ ........ .E.w.S.. ..K..... FEDCBA98 76543210\r\n");
+        uint64_t pins = gpioc_hilo_in_get();
+        uint64_t mask = (static_cast<uint64_t>(sio_hw->gpio_hi_oe) << 32) | static_cast<uint64_t>(sio_hw->gpio_oe);
         printf("%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s\r\n",
             static_cast<uint16_t>(pins >> 48), static_cast<uint8_t>(pins >> 40), static_cast<uint8_t>(pins >> 32),
             static_cast<uint16_t>(pins >> 16), static_cast<uint16_t>(pins), 
@@ -253,139 +252,207 @@ namespace cmd_io
             std::bitset<8>(pins >> 40).to_string().c_str(), std::bitset<8>(pins >> 32).to_string().c_str(), 
             std::bitset<8>(pins >> 24).to_string().c_str(), std::bitset<8>(pins >> 16).to_string().c_str(), 
             std::bitset<8>(pins >> 8).to_string().c_str(), std::bitset<8>(pins).to_string().c_str());
+        printf("%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s\r\n",
+            static_cast<uint16_t>(mask >> 48), static_cast<uint8_t>(mask >> 40), static_cast<uint8_t>(mask >> 32),
+            static_cast<uint16_t>(mask >> 16), static_cast<uint16_t>(mask), 
+            std::bitset<8>(mask >> 56).to_string().c_str(), std::bitset<8>(mask >> 48).to_string().c_str(), 
+            std::bitset<8>(mask >> 40).to_string().c_str(), std::bitset<8>(mask >> 32).to_string().c_str(), 
+            std::bitset<8>(mask >> 24).to_string().c_str(), std::bitset<8>(mask >> 16).to_string().c_str(), 
+            std::bitset<8>(mask >> 8).to_string().c_str(), std::bitset<8>(mask).to_string().c_str());
+    }
 
-
+    bool cmd_pin_status_on_clock(CommandInput input = CommandInput())
+    {
+        clocked_tasks.push_back(std::pair("Pins", pin_status));
         return false;
     }
 
-    bool cmd_pin_status_on_clock(std::string)
+//    bool cmd_memory_operation_on_clock(std::string)
+//    {
+//        clocked_tasks.push_back(std::pair("Memory", memory_operation));
+//        return false;
+//    }
+
+    bool cmd_disable_memory(CommandInput = CommandInput())
     {
-        dump_pins_on_clock = true;
+//        clocked_tasks.erase("Memory");
         return false;
     }
 
-    bool cmd_enable_memory(std::string)
+    bool cmd_reset(CommandInput input = CommandInput())
     {
-        run_memory_operation = true;
-        return false;
-    }
-
-    bool cmd_disable_memory(std::string)
-    {
-        run_memory_operation = false;
-        return false;
-    }
-
-    bool cmd_reset(std::string value)
-    {
-        printf("Current pin function is %d\r\n", gpio_get_function(PIN_RESET));
-        dump_pins_on_clock = false;
+        cancel_repeating_timer(&lfo_timer);
         if (gpio_get_function(PIN_RESET) != GPIO_FUNC_SIO)
         {
               gpio_init(PIN_RESET);
               gpio_set_dir(PIN_RESET, GPIO_OUT);
         }
         gpio_put(PIN_RESET, 0);
-        add_repeating_timer_ms(1, [](repeating_timer_t *){ gpio_put(PIN_RESET, 1); return false; }, NULL, &lfo_timer);
-//        gpio_put(PIN_RESET, 1);
+        clocked_tasks.clear();
+        add_alarm_in_ms(10, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 0); return 0; }, NULL, true);
+        add_alarm_in_ms(20, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 1); return 0; }, NULL, true);
+        add_alarm_in_ms(30, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 0); return 0; }, NULL, true);
+        add_alarm_in_ms(40, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 1); return 0; }, NULL, true);
+        add_alarm_in_ms(50, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_RESET, 1); return 0; }, NULL, true);
         return false;
     }
 
-    bool cmd_assert_databus(std::string value)
+    bool cmd_assert_databus(CommandInput input = CommandInput())
     {
-        if (value.empty())
+        if (input.empty())
         {
             printf("Enter hex value: ");
             return true;
         }
-        uint8_t data = std::stoi(value, nullptr, 16);
-        printf("\r\nAsserting data bus with %02x\r\n", data);
-        set_databus_dir(true);
-//        uint64_t mask = 0x0000ff0000000000;
-//        std::cout << "Mask is " << std::bitset<64>(mask) << ", data is " << std::bitset<64>(static_cast<uint64_t>(data) << 40) << std::endl;
-//        gAfterpio_put_masked64(mask, static_cast<uint64_t>(data) << 40);
-//        std::cout << "Before:" << std::endl;
-//        std::cout << "sio_hw->gpio_out " << std::bitset<32>(sio_hw->gpio_out) << std::endl;
-//        std::cout << "sio_hw->gpio_hi_out " << std::bitset<32>(sio_hw->gpio_hi_out) << std::endl;
-//
-        sio_hw->gpio_togl = (sio_hw->gpio_out ^ static_cast<uint32_t>(data) & DATA_MASK_LO);
-        sio_hw->gpio_hi_togl = (sio_hw->gpio_hi_out ^ static_cast<uint32_t>(data<<8) & DATA_MASK_HI);
-//
-//        std::cout << "After:" << std::endl;
-//        std::cout << "sio_hw->gpio_out " << std::bitset<32>(sio_hw->gpio_out) << std::endl;
-//        std::cout << "sio_hw->gpio_hi_out " << std::bitset<32>(sio_hw->gpio_hi_out) << std::endl;
-       
-//        = (sio_hw->gpio_out ^ (uint32_t)value) & (uint32_t)mask;
-//    sio_hw->gpio_hi_togl = (sio_hw->gpio_hi_out ^ (uint32_t)(value>>32u)) & (uint32_t)(mask>>32u);
+        std::cout << std::endl;
+        uint8_t data = std::stoi(input[0], nullptr, 16);
+        printf("Asserting data bus with %02x\r\n", data);
+        assert_databus(data);
         return false;
     }
 
-    bool cmd_assert_databus_via_pullups(std::string value)
+    void assert_databus(uint8_t data)
     {
-        if (value.empty())
+        for (auto ii = 40; ii < 48; ii++)
         {
-            printf("Enter hex value: ");
-            return true;
+            gpio_init(ii);
         }
-        uint8_t data = std::stoi(value, nullptr, 16);
-        printf("\r\nAsserting data bus via pullups with %02x\r\n", data);
-        set_databus_dir(false);
-        for (auto ii = 0; ii < 7; ii++)
+        set_databus_out(true);
+        std::cout << "Data " << std::bitset<64>(static_cast<uint64_t>(data) << 40) << std::endl << "Mask " << std::bitset<64>(DATA_MASK) << std::endl;
+        for (auto ii = 0; ii < 8; ii++)
         {
-            gpio_set_pulls(ii, data & (2 << ii), false);
+            if (data & (1 << ii))
+            {
+                gpio_put(ii + 40, 1);
+            }
+            else
+            {
+                gpio_put(ii + 40, 0);
+            }
+                    
         }
-//        uint64_t mask = 0x0000ff0000000000;
-//        gpio_put_masked(mask, static_cast<uint64_t>(data) << 40);
+//        gpio_put_masked64(DATA_MASK, static_cast<uint64_t>(data) << 40);
+    }
+
+    bool cmd_deassert_databus(CommandInput input = CommandInput())
+    {
+        set_databus_out(false);
         return false;
     }
 
-    void set_databus_dir(bool out)
+    inline void set_databus_out(bool out)
     {
-        uint64_t mask = 0x0000ff0000000000;
-        uint64_t value;
+//        std::cout << "set_databus_out " << out << " BEFORE " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
+//        for (auto ii = 40; ii < 48; ii++)
+//        {
+//            gpio_set_dir(ii, GPIO_OUT);
+//        }
+        if (out)
+            gpio_set_dir_masked64(DATA_MASK, DATA_MASK);
+        else
+          gpio_set_dir_masked64(DATA_MASK, 0);
+//        std::cout << "set_databus_out " << out << " AFTER " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
+    }
+
+    void set_address_bus_out(bool out)
+    {
+//        printf("set_address_bus_out %u\r\n", out);
+//        std::cout << "set_address_bus_out " << out << " BEFORE " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
         if (out)
         {
-            value = 0x0000ff0000000000;
+            gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+            gpio_set_dir(PIN_RW, GPIO_OUT);
+            gpio_put(PIN_RW, RW_READ);
+            gpio_set_dir_masked64(ADDR_MASK, ADDR_MASK);
         }
         else
         {
-            value = 0x0000000000000000;
+            gpio_set_dir_masked64(ADDR_MASK, 0);
+            gpio_set_dir(PIN_RW, GPIO_IN);
+            gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         }
-        std::cout << "set_databus_dir mask " << std::bitset<64>(mask) << std::endl;
-//        gpio_set_dir_masked64(mask, dir);
-        std::cout << "Before:" << std::endl;
-        std::cout << "gpio_oe " << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
-        std::cout << "gpio_hi_oe " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::endl;
-        sio_hw->gpio_oe_togl = (sio_hw->gpio_oe ^ (uint32_t)value) & (uint32_t)mask;
-        sio_hw->gpio_hi_oe_togl = (sio_hw->gpio_hi_oe ^ (uint32_t)(value >> 32u)) & (uint32_t)(mask >> 32u);
-        std::cout << "After:" << std::endl;
-        std::cout << "gpio_oe " << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
-        std::cout << "gpio_hi_oe " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::endl;
+//        std::cout << "set_address_bus_out " << out << " AFTER " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
     }
 
-    bool cmd_io(std::string value)
+    bool cmd_io(CommandInput input = CommandInput())
     {
-        if (value.empty())
+        if (input.empty())
         {
-            printf("[Dir/Pin[/Value] (i|o)NN(1|0)");
+            printf("[io]Pin[01] (i|o)NN(1|0)");
             return true;
         }
-        std::string io(value.substr(0,1));
-        std::string pin(value.substr(1,2));
-        std::string state(value.substr(3,1));
-        uint8_t pin_num = std::stoi(pin);
-        printf("io: %s, pin: %u, state: %s\r\n", io.c_str(), pin_num, state.c_str());
+//        std::string io(value.substr(0,1));
+//        std::string pin(value.substr(1,2));
+//        std::string state(value.substr(3,1));
+        uint8_t pin_num = std::stoi(input[2]);
+        printf("io: %s, pin: %u\r\n", input[1].c_str(), pin_num);
         gpio_init(pin_num);
-        gpio_set_dir(pin_num, "o" == io ? GPIO_OUT : GPIO_IN);
-        if (!state.empty())
+        gpio_set_dir(pin_num, "o" == input[1] ? GPIO_OUT : GPIO_IN);
+        if (input.size() >= 2)
         {
-            gpio_put(pin_num, "1" == state ? true : false);
+            gpio_put(pin_num, "1" == input[3] ? true : false);
         }
         else
         {
             printf("Pin %u is %u\r\n", pin_num, gpio_get(pin_num));
         }
         
+        return false;
+    }
+
+    bool cmd_clock_line_low(CommandInput input = CommandInput())
+    {
+        gpio_put(PIN_CLOCK, 0);
+        return false;
+    }
+    bool cmd_clock_line_high(CommandInput input = CommandInput())
+    {
+        gpio_put(PIN_CLOCK, 1);
+        return false;
+    }
+
+    bool cmd_assert_address_bus(CommandInput input = CommandInput())
+    {
+        if (input.empty())
+        {
+            printf("Enter addr XXXX: ");
+            return true;
+        }
+        std::cout << std::endl;
+        uint16_t address = std::stoi(input[0], nullptr, 16);
+        assert_address_bus(address);
+        return true;
+    }
+
+    void assert_address_bus(uint16_t addr)
+    {
+//        printf("Assert Address Bus %04x\r\n", addr);
+        set_address_bus_out(true);
+        gpio_put_masked64(ADDR_MASK, static_cast<uint64_t>(addr));
+    }
+
+    bool cmd_we_lo(CommandInput input = CommandInput())
+    {
+        gpio_set_dir(PIN_RW, GPIO_OUT);
+        gpio_put(PIN_RW, 0);
+        return false;
+    }
+
+    bool cmd_we_hi(CommandInput input = CommandInput())
+    {
+        gpio_set_dir(PIN_RW, GPIO_OUT);
+        gpio_put(PIN_RW, 1);
+        return false;
+    }
+    bool cmd_bus_active(CommandInput input = CommandInput()) 
+    {
+        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+        return false;
+    }
+
+    bool cmd_bus_inactive(CommandInput input = CommandInput())
+    {
+        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         return false;
     }
 
