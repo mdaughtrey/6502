@@ -59,22 +59,14 @@ namespace rom_ram
     }
     bool cmd_dump_memory(CommandInput input)
     {
-        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
-
-        for (auto iter = input.begin(); iter != input.end(); iter++)
-        {
-            printf("%s ", iter->c_str());
-        }
-
         if (input.empty())
         {
-            printf("Enter addr/length XXXX/XXXX: ");
             return true;
         }
-        printf("\r\n");
+        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         uint16_t addr = std::stoi(input[1], nullptr, 16);
         uint16_t length = std::stoi(input[2], nullptr, 16);
-        printf("addr %04x length %04x\r\n", addr, length);
+//        printf("addr %04x length %04x\r\n", addr, length);
         dump_memory(addr, length);
         gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         return false;
@@ -148,10 +140,8 @@ namespace rom_ram
     {
         if (input.empty())
         {
-            printf("Program number/Target Address 0-1/XXXX: ");
             return true;
         }
-        std::cout << std::endl;
         uint8_t program_number = std::stoi(input[1]);
 
         Program * iter = &programs[program_number];

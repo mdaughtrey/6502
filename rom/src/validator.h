@@ -8,11 +8,14 @@
 class Validator
 {
     public:
+        std::string memo;
         std::string accumulator;
         std::string pattern;
         std::smatch matches;
+        std::string prompt_string;
 
-        Validator(std::string pattern_p) : pattern(pattern_p)
+        Validator(std::string pattern_p = std::string(""), std::string prompt_p = std::string(""))
+            : pattern(pattern_p), prompt_string(prompt_p)
         {
         }
 
@@ -25,8 +28,13 @@ class Validator
         {
             return pattern.c_str();
         }
+        
+        const std::string & prompt()
+        {
+            return prompt_string;
+        }
 
-        std::string accumulated()
+        const std::string & accumulated()
         {
             return accumulator;
         }
@@ -34,12 +42,17 @@ class Validator
         {
             accumulator.clear();
         }
+        
+        void deletelast()
+        {
+            accumulator.pop_back();
+        }
 
         CommandInput validate(void)
         {
             std::regex re(pattern);
             CommandInput result;
-            printf("Validator: testing %s against %s\n", accumulator.c_str(), pattern.c_str());
+//            printf("Validator: testing %s against %s\n", accumulator.c_str(), pattern.c_str());
             if (std::regex_search(accumulator, matches, re))
             {
                 for (auto iter = matches.begin(); iter != matches.end(); iter++)

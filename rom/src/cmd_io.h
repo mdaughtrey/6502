@@ -25,4 +25,6 @@ namespace cmd_io
     bool cmd_we_hi(CommandInput);
     bool cmd_bus_active(CommandInput); 
     bool cmd_bus_inactive(CommandInput); 
+    bool cmd_dump_memory(CommandInput);
+    bool cmd_dump_memory_on_clock(CommandInput);
 }; // namespace cmd_io

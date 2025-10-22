@@ -1,5 +1,6 @@
 #include <bitset>
 #include <cstdio>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -36,6 +37,7 @@ namespace cmd_io
     void init(void)
     {
          cmd_init_buses(CommandInput());
+         cmd_reset(CommandInput());
     }
 
     bool cmd_init_buses(CommandInput input = CommandInput())
@@ -109,7 +111,6 @@ namespace cmd_io
     {
         if (input.empty())
         {
-            printf("Enter a frequency: ");
             return true;
         }
 
@@ -126,57 +127,15 @@ namespace cmd_io
         }
         float divider = sys_clk / frequency_hz * 1.0;  // Max wrap is 65535
        // if (divider < 1.0) divider = 1.0;
-        printf("divider %f\r\n", divider);
+//        printf("divider %f\r\n", divider);
         uint32_t idivider = static_cast<int>(divider);
-        printf("idivider %u\r\n", idivider);
+//        printf("idivider %u\r\n", idivider);
 
         uint16_t wrap = static_cast<int>((divider - idivider) * 65536) -1 ;
-        printf("wrap %u\r\n", wrap);
+//        printf("wrap %u\r\n", wrap);
         // clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, idivider, wrap);
         clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_USB, idivider, wrap);
         
-        return false;
-    }
-
-    bool set_clock_frequency0(std::string frequency)
-    {
-        printf("set_clock_frequency called with %s\r\n", frequency.c_str());
-        if (frequency.empty())
-        {
-            printf("Enter a frequency: ");
-            return true;
-        }
-        uint32_t frequency_hz = std::stoi(frequency);
-        printf("Setting clock frequency to %u Hz\n", frequency_hz);
-
-        if (gpio_get_function(PIN_CLOCK) != GPIO_FUNC_PWM)
-        {
-            gpio_set_function(PIN_CLOCK, GPIO_FUNC_PWM);
-        }
-
-        // Determine PWM slice and channel for the GPIO
-        uint slice_num = pwm_gpio_to_slice_num(PIN_CLOCK);
-        uint chan = pwm_gpio_to_channel(PIN_CLOCK);
-        printf("slice %u channel %u\r\n", slice_num, chan);
-
-        // Get system clock frequency
-        uint32_t sys_clk = clock_get_hz(clk_usb);
-        printf("sys_clk %u\r\n", sys_clk);
-
-        // Calculate divider and wrap values
-        float divider = sys_clk / (frequency_hz * 65536.0);  // Max wrap is 65535
-        if (divider < 1.0) divider = 1.0;
-        printf("divider %f\r\n", divider);
-        uint32_t idivider = static_cast<int>(divider);
-        printf("idivider %u\r\n", idivider);
-
-        uint32_t wrap = static_cast<int>((divider - idivider) * 65536) - 1;
-        printf("wrap %u\r\n", wrap);
-
-        pwm_set_clkdiv(slice_num, divider);
-        pwm_set_wrap(slice_num, wrap);
-        pwm_set_chan_level(slice_num, chan, wrap/2);
-        pwm_set_enabled(slice_num, true);
         return false;
     }
 
@@ -282,18 +241,22 @@ namespace cmd_io
     bool cmd_reset(CommandInput input = CommandInput())
     {
         cancel_repeating_timer(&lfo_timer);
-        if (gpio_get_function(PIN_RESET) != GPIO_FUNC_SIO)
-        {
-              gpio_init(PIN_RESET);
-              gpio_set_dir(PIN_RESET, GPIO_OUT);
-        }
+        gpio_init(PIN_RESET);
+        gpio_set_dir(PIN_RESET, GPIO_OUT);
         gpio_put(PIN_RESET, 0);
         clocked_tasks.clear();
-        add_alarm_in_ms(10, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 0); return 0; }, NULL, true);
-        add_alarm_in_ms(20, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 1); return 0; }, NULL, true);
-        add_alarm_in_ms(30, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 0); return 0; }, NULL, true);
-        add_alarm_in_ms(40, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 1); return 0; }, NULL, true);
-        add_alarm_in_ms(50, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_RESET, 1); return 0; }, NULL, true);
+        for (auto ii = 0; ii < 120; ii+=20)
+        {
+            gpio_put(PIN_CLOCK, 0);
+            sleep_ms(10);
+            gpio_put(PIN_CLOCK, 1);
+            sleep_ms(10);
+//            add_alarm_in_ms(8+ii, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 0); return 0; }, NULL, true);
+//            add_alarm_in_ms(16+ii, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 1); return 0; }, NULL, true);
+        }
+        sleep_ms(50);
+        gpio_put(PIN_RESET, 1);
+//        add_alarm_in_ms(500, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_RESET, 1); return 0; }, NULL, true);
         return false;
     }
 
@@ -301,10 +264,8 @@ namespace cmd_io
     {
         if (input.empty())
         {
-            printf("Enter hex value: ");
             return true;
         }
-        std::cout << std::endl;
         uint8_t data = std::stoi(input[0], nullptr, 16);
         printf("Asserting data bus with %02x\r\n", data);
         assert_databus(data);
@@ -378,7 +339,6 @@ namespace cmd_io
     {
         if (input.empty())
         {
-            printf("[io]Pin[01] (i|o)NN(1|0)");
             return true;
         }
 //        std::string io(value.substr(0,1));
@@ -415,10 +375,8 @@ namespace cmd_io
     {
         if (input.empty())
         {
-            printf("Enter addr XXXX: ");
             return true;
         }
-        std::cout << std::endl;
         uint16_t address = std::stoi(input[0], nullptr, 16);
         assert_address_bus(address);
         return true;
@@ -453,6 +411,14 @@ namespace cmd_io
     bool cmd_bus_inactive(CommandInput input = CommandInput())
     {
         gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+        return false;
+    }
+    bool cmd_dump_memory(CommandInput input = CommandInput())
+    {
+        return false;
+    }
+    bool cmd_dump_memory_on_clock(CommandInput input = CommandInput())
+    {
         return false;
     }
 
