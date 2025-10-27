@@ -16,7 +16,9 @@
 #include "types.h"
 #include "cmd_io.h"
 #include "cmd_io_internal.h"
+
 #include "rom_ram.h"
+#include "rom_ram_internal.h"
 #include "pin_defs.h"
 
 namespace cmd_io
@@ -33,6 +35,8 @@ namespace cmd_io
     std::list<std::pair<std::string, void (*)(void)> > clocked_tasks;
     repeating_timer_t lfo_timer;
     bool clock_pin_state = true;
+    uint16_t memdump_addr = 0;
+    uint16_t memdump_length = 0;
 
     void init(void)
     {
@@ -150,10 +154,10 @@ namespace cmd_io
         gpio_put(PIN_CLOCK, 0);
         sleep_us(1);
         uint64_t pins = gpioc_hilo_in_get();
-        if (pins & RW_MASK) // Read
-        {
+//        if (pins & RW_MASK) // Read
+//        {
             run_clocked_tasks();
-        }
+//        }
         gpio_put(PIN_CLOCK, 1);
         sleep_us(1);
         if (!(pins & RW_MASK)) // Write
@@ -413,12 +417,23 @@ namespace cmd_io
         gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         return false;
     }
-    bool cmd_dump_memory(CommandInput input = CommandInput())
+
+    bool cmd_set_memory_dump(CommandInput input = CommandInput())
     {
+        if (input.empty())
+        {
+            printf("No input\r\n");
+            return true;
+        }
+        memdump_addr = std::stoi(input[1], nullptr, 16);
+        memdump_length = std::stoi(input[2], nullptr, 16);
+        printf("Set %04x/%04x\r\n", memdump_addr, memdump_length);
         return false;
     }
+
     bool cmd_dump_memory_on_clock(CommandInput input = CommandInput())
     {
+        clocked_tasks.push_back(std::pair("Memory", [](){ rom_ram::dump_memory(memdump_addr, memdump_length); }));
         return false;
     }
 

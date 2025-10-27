@@ -56,7 +56,7 @@ Command commands_io[] = {
 {'C', "Clock Line High", Validator(""), cmd_io::cmd_clock_line_high },
 {
     'f', "Set Clock Frequency",
-    Validator("(\\d+)", "Enter a frequency"),
+    Validator("(\\d+)", "Hz"),
     cmd_io::cmd_set_clock_frequency 
 },
 {
@@ -71,8 +71,8 @@ Command commands_io[] = {
     Validator("([io])(\\d\\d)([01])", "[io]Pin[01] (i|o)NN(1|0)"),
     cmd_io::cmd_io 
 },
-{'m', "memory dump (XXXX/XXXX remembered)", Validator("[0-9a-fA-F]{4}/[0-9a-fA-F]{4}"), cmd_io::cmd_dump_memory },
-{'M', "memory dump on clock (XXXX/XXXX remembered)", Validator("[0-9a-fA-F]{4}/[0-9a-fA-F]{4}"), cmd_io::cmd_dump_memory_on_clock },
+{'m', "set memory dump", Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})","XXXX/XXXX"), cmd_io::cmd_set_memory_dump },
+{'M', "memory dump on clock", Validator(""), cmd_io::cmd_dump_memory_on_clock },
 //{'m', "Run Memory Operation", validator,cmd_io::cmd_memory_operation },
 //{'M', "Run Memory Operation on Clock", validator, cmd_io::cmd_memory_operation_on_clock },
 {'I', "Init Buses", Validator(""), cmd_io::cmd_init_buses },
@@ -97,8 +97,8 @@ Command commands_rom_ram[] = {
 {'l', "List Programs", Validator(""), rom_ram::cmd_list_programs },
 // {'u', "Upload ROM", hex_validator, rom_ram::cmd_upload_rom },
 {
-    'p', "Load Program to Memory (NN/XXXX)",
-    Validator("(\\d+)/([0-9a-fA-F]{4})", "Program number/Target Address N+/XXXX"),
+    'p', "Load Program (NN)",
+    Validator("(\\d+)", "Program number"),
     rom_ram::cmd_load_program_to_memory 
 },
 // {'P', "ROM to Program", numeric_validator, rom_ram::cmd_rom_to_program },
@@ -108,6 +108,7 @@ Command commands_rom_ram[] = {
 
 void handle(uint8_t input)
 {
+    const char blank_line[] = "\r                                            \r%s> %s";
     if (INTERACTIVE_INPUT == state)
     {
         if (input == 0x0d)
@@ -125,6 +126,11 @@ void handle(uint8_t input)
 //            current_command->validator.clear();
             state = COMMAND;
         }
+        else if (input == 24)
+        {
+            current_command->validator.clear();
+            printf(blank_line, current_command->validator.prompt().c_str(), current_command->validator.accumulated().c_str());
+        }
         else if (input == 0x03)
         {
 //            current_command->validator.clear();
@@ -134,7 +140,7 @@ void handle(uint8_t input)
         else if (input == 0x7f)
         {
             current_command->validator.deletelast();
-            printf("\r                                        \r%s> %s", current_command->validator.prompt().c_str(), current_command->validator.accumulated().c_str());
+            printf(blank_line, current_command->validator.prompt().c_str(), current_command->validator.accumulated().c_str());
         }
         else
         {
