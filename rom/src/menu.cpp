@@ -94,6 +94,7 @@ Command commands_rom_ram[] = {
     rom_ram::cmd_dump_memory
 },
 {'h', "help", Validator(""), cmd_help },
+{'i', "Upload ROM Image", Validator(""), rom_ram::cmd_upload_rom_image },
 {'l', "List Programs", Validator(""), rom_ram::cmd_list_programs },
 // {'u', "Upload ROM", hex_validator, rom_ram::cmd_upload_rom },
 {
@@ -101,7 +102,6 @@ Command commands_rom_ram[] = {
     Validator("(\\d+)", "Program number"),
     rom_ram::cmd_load_program_to_memory 
 },
-// {'P', "ROM to Program", numeric_validator, rom_ram::cmd_rom_to_program },
 {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
 {0x01, "", Validator(""), [](CommandInput input)->bool { return false;} }
 };

@@ -40,8 +40,8 @@ namespace cmd_io
 
     void init(void)
     {
-         cmd_init_buses(CommandInput());
          cmd_reset(CommandInput());
+         cmd_init_buses(CommandInput());
     }
 
     bool cmd_init_buses(CommandInput input = CommandInput())
@@ -79,7 +79,7 @@ namespace cmd_io
     static bool lfo_timer_callback(repeating_timer_t *t)
     {
         clock_pin_state = !clock_pin_state;
-        if (!clock_pin_state)
+        if (clock_pin_state)
         {   
             run_clocked_tasks();
         }
@@ -283,7 +283,7 @@ namespace cmd_io
             gpio_init(ii);
         }
         set_databus_out(true);
-        std::cout << "Data " << std::bitset<64>(static_cast<uint64_t>(data) << 40) << std::endl << "Mask " << std::bitset<64>(DATA_MASK) << std::endl;
+//        std::cout << "Data " << std::bitset<64>(static_cast<uint64_t>(data) << 40) << std::endl << "Mask " << std::bitset<64>(DATA_MASK) << std::endl;
         for (auto ii = 0; ii < 8; ii++)
         {
             if (data & (1 << ii))
