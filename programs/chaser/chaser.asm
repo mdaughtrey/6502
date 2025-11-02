@@ -27,11 +27,13 @@ ORAIRA0 = ORAIRA        ; ORAIRA no handshake
     sta DDRB
     sta DDRA
 loop:
-    lda #$01
+    lda #$ff
     eor $01
+;    lda $01
     sta ORBIRB
-    lda #$01
+    lda #$ff
     eor $00
+;    lda $00
     sta ORAIRA
     asl $01
     bcc reg2

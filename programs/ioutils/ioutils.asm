@@ -57,7 +57,7 @@ state_display:
     jsr display
 ;    lda #STATE_KEY   ; set state to display
 ;    sta STATE
-;    jmp main_loop
+    jmp main_loop
 
 ;state_key:
 ;    lda #STATE_KEY
@@ -80,16 +80,20 @@ state_display:
     sta DATAIO
     lda #SELECT_KEYS     ; select keys
     sta SELECTPORT
-    lda DATAPORT
+    lda #$ff
+    eor DATAPORT
     sta KEYS            ; store to memory
+    lda #$0f
+    and KEYS
+    sta KEYS
     rts
 .endproc
 
 .proc display
-    lda #SELECT_DISPLAY  ; select display
-    sta SELECTPORT
     lda #$ff            ; Data port output
     sta DATAIO
+    lda #SELECT_DISPLAY  ; select display
+    sta SELECTPORT
     eor DISPLAY_LO      ; invert bits
     sta DATAPORT          ; write to leds
 ;    lda #$ff            ; load display 1
@@ -99,7 +103,8 @@ state_display:
 .endproc
 
 .proc logic
-    ldx KEYS            ; load keys as index into key_maps
+    lda KEYS
+    tax
     lda led_maps, x
     sta DISPLAY_LO      ; Write to display memory
     rts
