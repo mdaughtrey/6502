@@ -27,4 +27,7 @@ namespace cmd_io
     bool cmd_bus_inactive(CommandInput); 
     bool cmd_set_memory_dump(CommandInput);
     bool cmd_dump_memory_on_clock(CommandInput);
+    bool cmd_set_breakpoint(CommandInput);
+    bool cmd_clear_breakpoint(CommandInput);
+    bool cmd_list_breakpoints(CommandInput);
 }; // namespace cmd_io

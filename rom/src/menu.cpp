@@ -71,6 +71,9 @@ Command commands_io[] = {
     Validator("([io])(\\d\\d)([01])", "[io]Pin[01] (i|o)NN(1|0)"),
     cmd_io::cmd_io 
 },
+{'k', "Breakpoint", Validator("([0-9a-fA-F]{4})","XXXX"), cmd_io::cmd_set_breakpoint },
+{'K', "Clear breakpoint", Validator("([0-9]+)","Clear Breakpoint"), cmd_io::cmd_clear_breakpoint },
+{'l', "List Breakpoints", Validator(""), cmd_io::cmd_list_breakpoints },
 {'m', "set memory dump", Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})","XXXX/XXXX"), cmd_io::cmd_set_memory_dump },
 {'M', "memory dump on clock", Validator(""), cmd_io::cmd_dump_memory_on_clock },
 //{'m', "Run Memory Operation", validator,cmd_io::cmd_memory_operation },

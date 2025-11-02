@@ -27,12 +27,14 @@ namespace cmd_io
     void set_address_bus_out(bool out);
     bool cmd_pin_status(CommandInput input);
     void pin_status(void);
+    void breakpoint_check(void);
 //    void memory_operation(void);
     void run_clocked_tasks(void);
     void assert_address_bus(uint16_t addr);
     void assert_databus(uint8_t data);
 //    std::deque<void (*)(void)> task_queue;
     std::list<std::pair<std::string, void (*)(void)> > clocked_tasks;
+    std::list<uint16_t> breakpoints;
     repeating_timer_t lfo_timer;
     bool clock_pin_state = true;
     uint16_t memdump_addr = 0;
@@ -124,6 +126,11 @@ namespace cmd_io
         printf("sys_clk %u\r\n", sys_clk);
         uint32_t frequency_hz = std::stof(input[1]);
         printf("Setting clock frequency to %u Hz\n", frequency_hz);
+        if (frequency_hz == 0)
+        {
+            gpio_init(PIN_CLOCK);
+            return false;
+        }
         if (frequency_hz < 1000)
         {
             set_clock_frequency_low(frequency_hz);
@@ -437,4 +444,82 @@ namespace cmd_io
         return false;
     }
 
+    void clocked_tasks_remove(std::string jobname)
+    {
+        for (auto iter = clocked_tasks.begin(); iter != clocked_tasks.end(); iter++)
+        {
+            if (iter->first == jobname)
+            {
+                clocked_tasks.erase(iter);
+                break;
+            }
+        }
+    }
+
+    void breakpoint_check(void)
+    {
+        uint16_t addr = static_cast<uint16_t>(gpioc_hilo_in_get() & ADDR_MASK);
+        for (auto iter = breakpoints.begin(); iter != breakpoints.end(); iter++)
+        {
+            if (*iter == addr)
+            {
+                cmd_set_clock_frequency();
+                printf("Breakpoint @%0x\r\n", *iter);
+                break;
+            }
+        }
+    }
+
+    bool cmd_set_breakpoint(CommandInput input = CommandInput())
+    {
+        if (input.empty())
+        {
+            return true;
+        }
+        breakpoints.push_back(std::stoi(input[1], nullptr, 16));
+        bool found = false;
+        for (auto iter = clocked_tasks.begin(); iter != clocked_tasks.end(); iter++)
+        {
+            if (iter->first == std::string("BreakpointCheck"))
+            {
+                found = true;
+                break;
+            }
+        }
+        if (false == found)
+        {
+            clocked_tasks.push_back(std::pair("BreakpointCheck", breakpoint_check));
+        }
+        return false;
+    }
+
+    bool cmd_clear_breakpoint(CommandInput input = CommandInput())
+    {
+        if (input.empty())
+        {
+            return true;
+        }
+        uint8_t index = std::stoi(input[1]);
+        if (index < breakpoints.size())
+        {
+            auto iter = breakpoints.begin();
+            std::advance(iter, index);
+            breakpoints.erase(iter);
+        }
+        if (breakpoints.empty())
+        {
+            clocked_tasks_remove("BreakpointCheck");
+        }
+        return false;
+    }
+
+    bool cmd_list_breakpoints(CommandInput input = CommandInput())
+    {
+        uint8_t index = 0;
+        for (auto iter = breakpoints.begin(); iter != breakpoints.end(); iter++)
+        {
+            printf("%02u: %04x\r\n", index++, *iter);
+        }
+        return false;
+    }
 } // namespace cmd_io
