@@ -48,7 +48,7 @@ namespace rom_ram
         {NULL, {0} }
     };
 
-    void dump_memory(uint16_t addr, uint16_t length);
+    std::string dump_memory(uint16_t addr, uint16_t length);
     void write_to_memory(uint8_t * data, uint16_t length, uint16_t target_address);
 
     void init(void)
@@ -78,12 +78,12 @@ namespace rom_ram
         uint16_t addr = std::stoi(input[1], nullptr, 16);
         uint16_t length = std::stoi(input[2], nullptr, 16);
 //        printf("addr %04x length %04x\r\n", addr, length);
-        dump_memory(addr, length);
+        printf("%s\r\n", dump_memory(addr, length));
         gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         return false;
     }
 
-    void dump_memory(uint16_t address, uint16_t length)
+    std::string dump_memory(uint16_t address, uint16_t length)
     {
         uint64_t mask = cmd_io::ADDR_MASK | cmd_io::RW_MASK;
         gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
@@ -93,10 +93,10 @@ namespace rom_ram
         length = std::min(length, static_cast<uint16_t>(0xffff-address));
 
         uint16_t lines = (length + 15) / 16;
+        std::stringstream linetext;
 
         for (auto line = 0; line < lines; line++)
         {
-            std::stringstream linetext;
             linetext << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << address + line * 16 << ": ";
             uint8_t dataline[16];
             for (auto i = 0; i < 16; i++)
@@ -124,10 +124,11 @@ namespace rom_ram
                     linetext << ".";
                 }
             }
-            std::cout << linetext.str() << std::endl;
+            linetext << std::endl;
         }
         gpio_set_dir_masked64(mask, 0);
         gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+        return linetext.str();
     }
 
 //    bool cmd_rom_to_program(CommandInput value)

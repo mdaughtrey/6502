@@ -28,12 +28,14 @@ namespace cmd_io
     bool cmd_pin_status(CommandInput input);
     void pin_status(void);
     void breakpoint_check(void);
+    void set_clock_frequency(float frequency_hz);
 //    void memory_operation(void);
     void run_clocked_tasks(void);
     void assert_address_bus(uint16_t addr);
     void assert_databus(uint8_t data);
 //    std::deque<void (*)(void)> task_queue;
     std::list<std::pair<std::string, void (*)(void)> > clocked_tasks;
+    std::list<std::string> log_queue;
     std::list<uint16_t> breakpoints;
     repeating_timer_t lfo_timer;
     bool clock_pin_state = true;
@@ -42,8 +44,8 @@ namespace cmd_io
 
     void init(void)
     {
-         cmd_reset(CommandInput());
          cmd_init_buses(CommandInput());
+         cmd_reset(CommandInput());
     }
 
     bool cmd_init_buses(CommandInput input = CommandInput())
@@ -67,6 +69,11 @@ namespace cmd_io
 
     void loop(void)
     {
+        for (auto iter = log_queue.begin(); iter != log_queue.end(); iter++)
+        {
+            std::cout << *iter << std::endl;
+        }
+        log_queue.clear();
 //        if (!gpio_get(PIN_CLOCK))
 //        {
 //            continue;
@@ -94,7 +101,7 @@ namespace cmd_io
 //        printf("Run_clocked_tasks: %u tasks\r\n", clocked_tasks.size());
         for (auto iter = clocked_tasks.begin(); iter != clocked_tasks.end(); iter++)
         {
-            printf("%s\r\n", iter->first.c_str());
+//            printf("%s\r\n", iter->first.c_str());
             iter->second();
         }
     }
@@ -110,7 +117,7 @@ namespace cmd_io
         }
         clock_pin_state = false;
         add_repeating_timer_ms(static_cast<uint32_t>(period), &lfo_timer_callback, NULL, &lfo_timer);
-        printf("set_clock_frequency_returns\r\n");
+//        printf("set_clock_frequency_returns\r\n");
     }
 
     bool cmd_set_clock_frequency(CommandInput input = CommandInput())
@@ -119,22 +126,30 @@ namespace cmd_io
         {
             return true;
         }
+        uint32_t frequency_hz = std::stof(input[1]);
+        set_clock_frequency(frequency_hz);
+        return false;
+    }
 
+    void set_clock_frequency(float frequency_hz)
+    {
         cancel_repeating_timer(&lfo_timer);
         
         uint32_t sys_clk = clock_get_hz(clk_usb);
-        printf("sys_clk %u\r\n", sys_clk);
-        uint32_t frequency_hz = std::stof(input[1]);
-        printf("Setting clock frequency to %u Hz\n", frequency_hz);
-        if (frequency_hz == 0)
+        char buffer[32];
+        sprintf(buffer, "Clock frequency %f Hz", frequency_hz);
+        log_queue.push_back(buffer);
+ //       printf("sys_clk %u\r\n", sys_clk);
+        if (frequency_hz == 0.0)
         {
             gpio_init(PIN_CLOCK);
-            return false;
+            return;
         }
+        gpio_set_dir(PIN_CLOCK, GPIO_OUT);
         if (frequency_hz < 1000)
         {
             set_clock_frequency_low(frequency_hz);
-            return false;
+            return;
         }
         float divider = sys_clk / frequency_hz * 1.0;  // Max wrap is 65535
        // if (divider < 1.0) divider = 1.0;
@@ -146,8 +161,6 @@ namespace cmd_io
 //        printf("wrap %u\r\n", wrap);
         // clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, idivider, wrap);
         clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_USB, idivider, wrap);
-        
-        return false;
     }
 
     bool cmd_step_clock(CommandInput input = CommandInput())
@@ -211,24 +224,29 @@ namespace cmd_io
 
     void pin_status(void)
     {
-        printf("     Data          Addr                   Data               b R R     C      AddrH    AddrL\r\n");
-        printf(".... ..    .. .... .... ........ ........ ........ ........ .E.w.S.. ..K..... FEDCBA98 76543210\r\n");
+        char buffer[128];
+        sprintf(buffer, "     Data          Addr                   Data               b R R     C      AddrH    AddrL");
+        log_queue.push_back(buffer);
+        sprintf(buffer, ".... ..    .. .... .... ........ ........ ........ ........ .E.w.S.. ..K..... FEDCBA98 76543210");
+        log_queue.push_back(buffer);
         uint64_t pins = gpioc_hilo_in_get();
         uint64_t mask = (static_cast<uint64_t>(sio_hw->gpio_hi_oe) << 32) | static_cast<uint64_t>(sio_hw->gpio_oe);
-        printf("%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s\r\n",
+        sprintf(buffer, "%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s",
             static_cast<uint16_t>(pins >> 48), static_cast<uint8_t>(pins >> 40), static_cast<uint8_t>(pins >> 32),
             static_cast<uint16_t>(pins >> 16), static_cast<uint16_t>(pins), 
             std::bitset<8>(pins >> 56).to_string().c_str(), std::bitset<8>(pins >> 48).to_string().c_str(), 
             std::bitset<8>(pins >> 40).to_string().c_str(), std::bitset<8>(pins >> 32).to_string().c_str(), 
             std::bitset<8>(pins >> 24).to_string().c_str(), std::bitset<8>(pins >> 16).to_string().c_str(), 
             std::bitset<8>(pins >> 8).to_string().c_str(), std::bitset<8>(pins).to_string().c_str());
-        printf("%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s\r\n",
+        log_queue.push_back(buffer);
+        sprintf(buffer, "%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s",
             static_cast<uint16_t>(mask >> 48), static_cast<uint8_t>(mask >> 40), static_cast<uint8_t>(mask >> 32),
             static_cast<uint16_t>(mask >> 16), static_cast<uint16_t>(mask), 
             std::bitset<8>(mask >> 56).to_string().c_str(), std::bitset<8>(mask >> 48).to_string().c_str(), 
             std::bitset<8>(mask >> 40).to_string().c_str(), std::bitset<8>(mask >> 32).to_string().c_str(), 
             std::bitset<8>(mask >> 24).to_string().c_str(), std::bitset<8>(mask >> 16).to_string().c_str(), 
             std::bitset<8>(mask >> 8).to_string().c_str(), std::bitset<8>(mask).to_string().c_str());
+        log_queue.push_back(buffer);
     }
 
     bool cmd_pin_status_on_clock(CommandInput input = CommandInput())
@@ -425,6 +443,18 @@ namespace cmd_io
         return false;
     }
 
+    bool cmd_dump_memory(CommandInput input = CommandInput())
+    {
+        if (input.empty())
+        {
+            return true;
+        }
+        memdump_addr = std::stoi(input[1], nullptr, 16);
+        memdump_length = std::stoi(input[2], nullptr, 16);
+        log_queue.push_back(rom_ram::dump_memory(memdump_addr, memdump_length));
+        return false;
+    }
+
     bool cmd_set_memory_dump(CommandInput input = CommandInput())
     {
         if (input.empty())
@@ -440,7 +470,7 @@ namespace cmd_io
 
     bool cmd_dump_memory_on_clock(CommandInput input = CommandInput())
     {
-        clocked_tasks.push_back(std::pair("Memory", [](){ rom_ram::dump_memory(memdump_addr, memdump_length); }));
+        clocked_tasks.push_back(std::pair("Memory", [](){ log_queue.push_back(rom_ram::dump_memory(memdump_addr, memdump_length)); }));
         return false;
     }
 
@@ -458,13 +488,17 @@ namespace cmd_io
 
     void breakpoint_check(void)
     {
+        char buffer[64];
         uint16_t addr = static_cast<uint16_t>(gpioc_hilo_in_get() & ADDR_MASK);
         for (auto iter = breakpoints.begin(); iter != breakpoints.end(); iter++)
         {
-            if (*iter == addr)
+            sprintf(buffer, "Checking addr %04x against %04x", addr, *iter);
+            log_queue.push_back(buffer);
+            if (addr == *iter)
             {
-                cmd_set_clock_frequency();
-                printf("Breakpoint @%0x\r\n", *iter);
+                set_clock_frequency(0.0);
+                sprintf(buffer, "Break @%04x", addr);
+                log_queue.push_back(buffer);
                 break;
             }
         }
@@ -480,7 +514,7 @@ namespace cmd_io
         bool found = false;
         for (auto iter = clocked_tasks.begin(); iter != clocked_tasks.end(); iter++)
         {
-            if (iter->first == std::string("BreakpointCheck"))
+            if (iter->first == std::string("Breakpoint"))
             {
                 found = true;
                 break;
@@ -488,7 +522,7 @@ namespace cmd_io
         }
         if (false == found)
         {
-            clocked_tasks.push_back(std::pair("BreakpointCheck", breakpoint_check));
+            clocked_tasks.push_back(std::pair("Breakpoint", breakpoint_check));
         }
         return false;
     }
@@ -508,7 +542,7 @@ namespace cmd_io
         }
         if (breakpoints.empty())
         {
-            clocked_tasks_remove("BreakpointCheck");
+            clocked_tasks_remove("Breakpoint");
         }
         return false;
     }
@@ -520,6 +554,12 @@ namespace cmd_io
         {
             printf("%02u: %04x\r\n", index++, *iter);
         }
+        return false;
+    }
+
+    bool cmd_clear_clocked_tasks(CommandInput input = CommandInput())
+    {
+        clocked_tasks.clear();
         return false;
     }
 } // namespace cmd_io

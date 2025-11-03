@@ -83,6 +83,12 @@ Command commands_io[] = {
 {'P', "Pin Status on Clock", Validator(""), cmd_io::cmd_pin_status_on_clock },
 {'R', "Reset", Validator(""), cmd_io::cmd_reset },
 {'s', "Step Clock", Validator(""), cmd_io::cmd_step_clock },
+{
+    'u', "Dump Memory (XXXX)",
+    Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})", "Enter addr/length (XXXX/XXXX)"),
+    cmd_io::cmd_dump_memory
+},
+{'t', "Clear Queued Tasks", Validator(""), cmd_io::cmd_clear_clocked_tasks },
 {'w', "Write Enable Low (write)", Validator("*"), cmd_io::cmd_we_lo },
 {'W', "Write Enable High (read)", Validator("*"), cmd_io::cmd_we_hi },
 {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},

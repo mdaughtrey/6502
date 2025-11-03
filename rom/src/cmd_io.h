@@ -30,4 +30,6 @@ namespace cmd_io
     bool cmd_set_breakpoint(CommandInput);
     bool cmd_clear_breakpoint(CommandInput);
     bool cmd_list_breakpoints(CommandInput);
+    bool cmd_clear_clocked_tasks(CommandInput);
+    bool cmd_dump_memory(CommandInput);
 }; // namespace cmd_io
