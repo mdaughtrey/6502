@@ -48,7 +48,7 @@ DISPLAY_HI: .byte 0
     sta SELECTPORT       ; 
 
 main_loop:
-state_display:
+; state_display:
 ;    lda #STATE_DISPLAY
 ;    cmp STATE
 ;    bne state_key
@@ -83,9 +83,9 @@ state_display:
     lda #$ff
     eor DATAPORT
     sta KEYS            ; store to memory
-    lda #$0f
-    and KEYS
-    sta KEYS
+    lda #$0f            ; mask off the bits we don't need
+    and KEYS            ; ...
+    sta KEYS            ; ...
     rts
 .endproc
 
@@ -131,4 +131,4 @@ led_maps:
 .byte $ff ; 1111
 
 .segment "RESETVEC"
-.word $c000
+.word $c200

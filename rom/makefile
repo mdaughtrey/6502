@@ -31,7 +31,8 @@ upload:
 	${ACLI} upload  -b ${PLATFORM} -p ${PORT} -i  ${UF2}
 
 s:
-	screen ${PORT} 115200
+	screen ${PORT} 460801
+	# screen ${PORT} 115200
 
 # openocd -s /usr/share/openocd/ -f scripts/interface/cmsis-dap.cfg -f target/rp2040.cfg -c "adapter speed 100"
 # gdb ~/bin/openocd/src/openocd -f interface/cmsis-dap.cfg -f target/rp2350.cfg  -s ~/bin/openocd/tcl

@@ -32,4 +32,5 @@ namespace cmd_io
     bool cmd_list_breakpoints(CommandInput);
     bool cmd_clear_clocked_tasks(CommandInput);
     bool cmd_dump_memory(CommandInput);
+    void cmd_verbose_logging(bool);
 }; // namespace cmd_io

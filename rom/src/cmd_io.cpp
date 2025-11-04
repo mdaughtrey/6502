@@ -21,6 +21,15 @@
 #include "rom_ram_internal.h"
 #include "pin_defs.h"
 
+
+#define VERBOSE(...) \
+if (verbose) \
+{ \
+    char buffer[64]; \
+    sprintf(buffer, __VA_ARGS__); \
+    log_queue.push_back(buffer); \
+}
+
 namespace cmd_io
 {
     void set_databus_out(bool out);
@@ -39,6 +48,7 @@ namespace cmd_io
     std::list<uint16_t> breakpoints;
     repeating_timer_t lfo_timer;
     bool clock_pin_state = true;
+    bool verbose = false;
     uint16_t memdump_addr = 0;
     uint16_t memdump_length = 0;
 
@@ -98,10 +108,10 @@ namespace cmd_io
 
     void run_clocked_tasks(void)
     {
-//        printf("Run_clocked_tasks: %u tasks\r\n", clocked_tasks.size());
+        VERBOSE("Run_clocked_tasks: %u tasks", clocked_tasks.size())
         for (auto iter = clocked_tasks.begin(); iter != clocked_tasks.end(); iter++)
         {
-//            printf("%s\r\n", iter->first.c_str());
+            VERBOSE("Clocked task %s", iter->first.c_str())
             iter->second();
         }
     }
@@ -109,7 +119,7 @@ namespace cmd_io
     void set_clock_frequency_low(uint32_t frequency_hz)
     {
         float period = 1.0/static_cast<float>(frequency_hz)*500.0;
-        printf("set_clock_frequency_low called with %u, period is %f\r\n", frequency_hz, period);
+        VERBOSE("set_clock_frequency_low called with %u, period is %f\r\n", frequency_hz, period)
         if (gpio_get_function(PIN_CLOCK) != GPIO_FUNC_SIO)
         {
             gpio_init(PIN_CLOCK);
@@ -117,7 +127,7 @@ namespace cmd_io
         }
         clock_pin_state = false;
         add_repeating_timer_ms(static_cast<uint32_t>(period), &lfo_timer_callback, NULL, &lfo_timer);
-//        printf("set_clock_frequency_returns\r\n");
+        VERBOSE("set_clock_frequency_returns");
     }
 
     bool cmd_set_clock_frequency(CommandInput input = CommandInput())
@@ -131,14 +141,13 @@ namespace cmd_io
         return false;
     }
 
+
     void set_clock_frequency(float frequency_hz)
     {
         cancel_repeating_timer(&lfo_timer);
         
         uint32_t sys_clk = clock_get_hz(clk_usb);
-        char buffer[32];
-        sprintf(buffer, "Clock frequency %f Hz", frequency_hz);
-        log_queue.push_back(buffer);
+        VERBOSE("Clock frequency %f Hz", frequency_hz)
  //       printf("sys_clk %u\r\n", sys_clk);
         if (frequency_hz == 0.0)
         {
@@ -270,10 +279,11 @@ namespace cmd_io
     bool cmd_reset(CommandInput input = CommandInput())
     {
         cancel_repeating_timer(&lfo_timer);
+        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         gpio_init(PIN_RESET);
         gpio_set_dir(PIN_RESET, GPIO_OUT);
         gpio_put(PIN_RESET, 0);
-        clocked_tasks.clear();
+//        clocked_tasks.clear();
         for (auto ii = 0; ii < 120; ii+=20)
         {
             gpio_put(PIN_CLOCK, 0);
@@ -286,6 +296,7 @@ namespace cmd_io
         sleep_ms(50);
         gpio_put(PIN_RESET, 1);
 //        add_alarm_in_ms(500, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_RESET, 1); return 0; }, NULL, true);
+        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         return false;
     }
 
@@ -296,7 +307,7 @@ namespace cmd_io
             return true;
         }
         uint8_t data = std::stoi(input[0], nullptr, 16);
-        printf("Asserting data bus with %02x\r\n", data);
+        VERBOSE("Asserting data bus with %02x\r\n", data)
         assert_databus(data);
         return false;
     }
@@ -374,7 +385,7 @@ namespace cmd_io
 //        std::string pin(value.substr(1,2));
 //        std::string state(value.substr(3,1));
         uint8_t pin_num = std::stoi(input[2]);
-        printf("io: %s, pin: %u\r\n", input[1].c_str(), pin_num);
+        VERBOSE("io: %s, pin: %u\r\n", input[1].c_str(), pin_num)
         gpio_init(pin_num);
         gpio_set_dir(pin_num, "o" == input[1] ? GPIO_OUT : GPIO_IN);
         if (input.size() >= 2)
@@ -413,7 +424,12 @@ namespace cmd_io
 
     void assert_address_bus(uint16_t addr)
     {
-//        printf("Assert Address Bus %04x\r\n", addr);
+//        if (verbose)
+//        {
+//            char buffer[64];
+//            sprintf(buffer, "Assert Address Bus %04x\r\n", addr);
+//            log_queue.push_back(buffer);
+//        }
         set_address_bus_out(true);
         gpio_put_masked64(ADDR_MASK, static_cast<uint64_t>(addr));
     }
@@ -470,7 +486,8 @@ namespace cmd_io
 
     bool cmd_dump_memory_on_clock(CommandInput input = CommandInput())
     {
-        clocked_tasks.push_back(std::pair("Memory", [](){ log_queue.push_back(rom_ram::dump_memory(memdump_addr, memdump_length)); }));
+        clocked_tasks.push_back(std::pair("Memory", [](){ VERBOSE("lambda"); log_queue.push_back(rom_ram::dump_memory(memdump_addr, memdump_length)); }));
+        VERBOSE("Dumping %04x/%04x on clock", memdump_addr, memdump_length)
         return false;
     }
 
@@ -488,17 +505,16 @@ namespace cmd_io
 
     void breakpoint_check(void)
     {
-        char buffer[64];
+//        char buffer[64];
         uint16_t addr = static_cast<uint16_t>(gpioc_hilo_in_get() & ADDR_MASK);
         for (auto iter = breakpoints.begin(); iter != breakpoints.end(); iter++)
         {
-            sprintf(buffer, "Checking addr %04x against %04x", addr, *iter);
-            log_queue.push_back(buffer);
+            VERBOSE("Checking addr %04x against %04x", addr, *iter);
+//            log_queue.push_back(buffer);
             if (addr == *iter)
             {
                 set_clock_frequency(0.0);
-                sprintf(buffer, "Break @%04x", addr);
-                log_queue.push_back(buffer);
+                VERBOSE("Break @%04x", addr)
                 break;
             }
         }
@@ -561,5 +577,10 @@ namespace cmd_io
     {
         clocked_tasks.clear();
         return false;
+    }
+
+    void cmd_verbose_logging(bool set)
+    {
+        verbose = set;
     }
 } // namespace cmd_io

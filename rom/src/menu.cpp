@@ -88,7 +88,9 @@ Command commands_io[] = {
     Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})", "Enter addr/length (XXXX/XXXX)"),
     cmd_io::cmd_dump_memory
 },
-{'t', "Clear Queued Tasks", Validator(""), cmd_io::cmd_clear_clocked_tasks },
+{'t', "Clear Clocked Tasks", Validator(""), cmd_io::cmd_clear_clocked_tasks },
+{'v', "Verbose logging", Validator(""), [](CommandInput) -> bool { cmd_io::cmd_verbose_logging(true); return false; }},
+{'V', "Terse logging", Validator(""), [](CommandInput) ->bool { cmd_io::cmd_verbose_logging(false); return false; }},
 {'w', "Write Enable Low (write)", Validator("*"), cmd_io::cmd_we_lo },
 {'W', "Write Enable High (read)", Validator("*"), cmd_io::cmd_we_hi },
 {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
