@@ -162,12 +162,12 @@ namespace cmd_io
         }
         float divider = sys_clk / frequency_hz * 1.0;  // Max wrap is 65535
        // if (divider < 1.0) divider = 1.0;
-//        printf("divider %f\r\n", divider);
+        VERBOSE("divider %f\r\n", divider);
         uint32_t idivider = static_cast<int>(divider);
-//        printf("idivider %u\r\n", idivider);
+        VERBOSE("idivider %u\r\n", idivider);
 
         uint16_t wrap = static_cast<int>((divider - idivider) * 65536) -1 ;
-//        printf("wrap %u\r\n", wrap);
+        VERBOSE("wrap %u\r\n", wrap);
         // clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, idivider, wrap);
         clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_USB, idivider, wrap);
     }

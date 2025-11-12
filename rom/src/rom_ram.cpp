@@ -85,29 +85,24 @@ namespace rom_ram
     {
         std::stringstream linetext;
 
-        uint64_t mask = cmd_io::ADDR_MASK | cmd_io::RW_MASK;
         gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+        uint64_t mask = cmd_io::ADDR_MASK | cmd_io::RW_MASK;
         gpio_set_dir_masked64(mask, mask);
-        gpio_set_dir_masked64(cmd_io::DATA_MASK, 0);
+        gpio_put(PIN_RW, 1);        // Read
 
         length = std::min(length, static_cast<uint16_t>(0xffff-address));
 
         uint16_t lines = (length + 15) / 16;
 
-//        linetext << "Addr " << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << address;
-//        linetext << " Length " << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << length;
-//        linetext << " lines " << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << lines;
-//        linetext << std::endl;
-//        return linetext.str();
-
         for (auto line = 0; line < lines; line++)
         {
-//            linetext << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << address + line * 16 << ": ";
+            linetext << std::endl << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << address + line * 16 << ": ";
             uint8_t dataline[16];
             for (auto i = 0; i < 16; i++)
             {
-                cmd_io::assert_address_bus(address + (line * 16) + i);
-                sleep_us(2);
+//                cmd_io::assert_address_bus(address + (line * 16) + i);
+                gpio_put_masked64(cmd_io::ADDR_MASK, address + (line * 16) + i);
+                sleep_us(10);
 //                uint64_t data64 = gpioc_hilo_in_get();
 //                printf("data64 %016x\r\n", data64);
 //                data64 = gpioc_hilo_in_get();

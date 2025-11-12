@@ -17,12 +17,14 @@ IFR = IOBASE + 13       ; Interrupt flag register
 IER = IOBASE + 14       ; Interrupt enable register
 ORAIRA0 = ORAIRA        ; ORAIRA no handshake
 
+.segment "ZEROPAGE"
+PARAMS:  .res 16
+; Key state
+KEYS: .byte 0
+; MODE: .byte 0
+COUNT: .byte 0
+
 .segment "DATA"
-; state variables
-; STATE: .byte 0
-; STATE_KEY = 0
-; STATE_DISPLAY = 1 
-; STATE_LOGIC = 2
 DATAPORT = ORAIRA
 DATAIO = DDRA
 SELECTPORT = ORBIRB
@@ -30,105 +32,141 @@ SELECTIO = DDRB
 
 SELECT_KEYS = %11111110
 SELECT_DISPLAY = %11111101
+SELECT_LCD = %11111011
 
-; ---- VARIABLES ----
-; Key state
-KEYS: .byte 0
-DISPLAY_LO: .byte 0
-DISPLAY_HI: .byte 0
+LCD_D0    = %00000001
+LCD_D1    = %00000010
+LCD_D2    = %00000100
+LCD_D3    = %00001000
+LCD_RS    = %00010000
+LCD_RW    = %00100000
+LCD_E     = %01000000
+LCD_BUSY  = %10000000
 
 .segment "CODE"
 .proc main
-    lda #$00            ; reset state
-;    sta STATE
-    sta DISPLAY_LO      ; Clear sta DISPLAY_HI      ; Clear
     lda #$ff            ; Set select bus to output
     sta SELECTIO
     lda #$ff            ; Deselect all
     sta SELECTPORT       ; 
+;    jsr lcd_init
+;    lda #SELECT_LCD
+;    sta SELECTPORT
+;    lda #$ff
+;    sta DATAIO
 
 main_loop:
-; state_display:
-;    lda #STATE_DISPLAY
-;    cmp STATE
-;    bne state_key
-    jsr read_keys
-    jsr logic
-    jsr display
-;    lda #STATE_KEY   ; set state to display
-;    sta STATE
+    jsr read_keys ; returns key bitmap in A
+    sta KEYS
+    lda #SELECT_LCD
+    sta SELECTPORT 
+    lda #$ff
+    sta DATAIO
+    lda KEYS
+    cmp #$01
+    bne ml1
+    lda #LCD_RS
+    sta DATAPORT
+ml1:
+    cmp #$02
+    bne ml2
+    lda #LCD_RW
+    sta DATAPORT
+ml2:
+    cmp #$04
+    bne ml3
+    lda #LCD_E
+    sta DATAPORT
+ml3:
+    
+
+;    jsr logic ; returns A: display bitmap
+;    jsr display
     jmp main_loop
 
-;state_key:
-;    lda #STATE_KEY
-;    cmp STATE
-;    bne state_logic
-;    jsr read_keys
-;    lda #STATE_LOGIC       ; set state to key
-;    sta STATE
-;    jmp main_loop
-
-; state_logic:
-;    jsr logic
-;    lda #STATE_DISPLAY       ; set state to key
-;    sta STATE
-;    jmp main_loop
 .endproc                ; main
 
+; return: a = keys pressed bitmask (....bbbb)
 .proc read_keys
     lda #$00            ; set dataport to input
     sta DATAIO
     lda #SELECT_KEYS     ; select keys
     sta SELECTPORT
-    lda #$ff
-    eor DATAPORT
-    sta KEYS            ; store to memory
-    lda #$0f            ; mask off the bits we don't need
-    and KEYS            ; ...
-    sta KEYS            ; ...
+    lda DATAPORT
+    eor #$ff
+    and #$0f            ; mask off the bits we don't need
     rts
 .endproc
 
 .proc display
+    tax
     lda #$ff            ; Data port output
     sta DATAIO
     lda #SELECT_DISPLAY  ; select display
     sta SELECTPORT
-    eor DISPLAY_LO      ; invert bits
+    txa
+    eor #$ff
     sta DATAPORT          ; write to leds
-;    lda #$ff            ; load display 1
-;    eor DISPLAY_HI      ; invert bits
-;    sta ORAIRA          ; write to leds
     rts
 .endproc
 
-.proc logic
-    lda KEYS
-    tax
-    lda led_maps, x
-    sta DISPLAY_LO      ; Write to display memory
+; Call A: key bitmap
+; Return: A: display bitmap
+;.proc logic
+;    tax
+;    lda led_maps, x
+;    rts
+;.endproc
+
+; A = byte to write
+.proc lcd_write_byte
+    tax             ; save A
+    lsr A           ; shift right 4
+    lsr A
+    lsr A
+    lsr A
+    ora LCD_E        ; enable low
+    sta DATAPORT    ; write D7-D4
+    eor LCD_E       ; enable hight
+    txa
+    and #$0f        ; mask off lower bits
+    ora LCD_E
+    sta DATAPORT    ; write D3-D0
+    eor LCD_E
+    rts
+.endproc
+
+.proc lcd_init
+    lda #SELECT_LCD  ; select display
+    sta SELECTPORT
+    lda #$ff         ; set dataport to output
+    sta DATAIO
+    lda #$28         ; 4-bit interface, 2 lines
+    jsr lcd_write_byte
+    lda #$0f         ; display on
+    jsr lcd_write_byte
     rts
 .endproc
 
 
-.segment "RODATA"
-led_maps:
-.byte $00 ; 0000
-.byte $03 ; 0001
-.byte $0c ; 0010
-.byte $3c ; 0011
-.byte $30 ; 0100
-.byte $33 ; 0101
-.byte $3c ; 0110
-.byte $3f ; 0111
-.byte $c0 ; 1000
-.byte $c3 ; 1001
-.byte $cc ; 1010
-.byte $cf ; 1011
-.byte $c0 ; 1100
-.byte $c3 ; 1101
-.byte $fc ; 1110
-.byte $ff ; 1111
+; .segment "RODATA"
+; led_maps:
+; .byte $00 ; 0000
+; .byte $03 ; 0001
+; .byte $0c ; 0010
+; .byte $3c ; 0011
+; .byte $30 ; 0100
+; .byte $33 ; 0101
+; .byte $3c ; 0110
+; .byte $3f ; 0111
+; .byte $c0 ; 1000
+; .byte $c3 ; 1001
+; .byte $cc ; 1010
+; .byte $cf ; 1011
+; .byte $c0 ; 1100
+; .byte $c3 ; 1101
+; .byte $fc ; 1110
+; .byte $ff ; 1111
 
 .segment "RESETVEC"
 .word $c200

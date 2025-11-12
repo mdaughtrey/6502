@@ -38,10 +38,10 @@ Command * current_command = NULL;
 // std::string accumulator = "";
 
 Command commands_top[] = {
-{'h', "help", Validator("*"), cmd_help },
-{'i', "I/O Menu", Validator("*"), [](CommandInput) -> bool{ command_set = commands_io; return false; }},
-{'r', "ROM/RAM Menu", Validator("*"), [](CommandInput) -> bool{ command_set = commands_rom_ram; return false; }},
-{0x01, "", Validator("*"), [](CommandInput input)->bool{ return false; } }
+{'h', "help", Validator(""),cmd_help },
+{'i', "I/O Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_io; return false; }},
+{'r', "ROM/RAM Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_rom_ram; return false; }},
+{0x01, "", Validator(""), [](CommandInput input)->bool{ return false; } }
 };
 
 Command commands_io[] = {
@@ -50,8 +50,8 @@ Command commands_io[] = {
     Validator("[0-9a-fA-F]{4}", "Enter addr XXXX"),
     cmd_io::cmd_assert_address_bus 
 },
-{'b', "Bus Inactive", Validator("*"), cmd_io::cmd_bus_inactive },
-{'B', "Bus Active", Validator("*"), cmd_io::cmd_bus_active },
+{'b', "Bus Inactive", Validator(""), cmd_io::cmd_bus_inactive },
+{'B', "Bus Active", Validator(""), cmd_io::cmd_bus_active },
 {'c', "Clock Line Low", Validator(""), cmd_io::cmd_clock_line_low },
 {'C', "Clock Line High", Validator(""), cmd_io::cmd_clock_line_high },
 {
@@ -180,7 +180,10 @@ void handle(uint8_t input)
             {
 //                current_command->validator.clear();
                 state = COMMAND;
-                std::cout << "> " << current_command->validator.accumulated();
+                if (!current_command->validator.pattern.empty())
+                {
+                    std::cout << "> " << current_command->validator.accumulated() << std::flush;
+                }
 //                accumulator = "";
             }
             break;
