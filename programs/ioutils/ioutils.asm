@@ -49,7 +49,7 @@ LCD_BUSY  = %10000000
     sta SELECTIO
     lda #$ff            ; Deselect all
     sta SELECTPORT       ; 
-;    jsr lcd_init
+    jsr lcd_init
 ;    lda #SELECT_LCD
 ;    sta SELECTPORT
 ;    lda #$ff
@@ -57,29 +57,6 @@ LCD_BUSY  = %10000000
 
 main_loop:
     jsr read_keys ; returns key bitmap in A
-    sta KEYS
-    lda #SELECT_LCD
-    sta SELECTPORT 
-    lda #$ff
-    sta DATAIO
-    lda KEYS
-    cmp #$01
-    bne ml1
-    lda #LCD_RS
-    sta DATAPORT
-ml1:
-    cmp #$02
-    bne ml2
-    lda #LCD_RW
-    sta DATAPORT
-ml2:
-    cmp #$04
-    bne ml3
-    lda #LCD_E
-    sta DATAPORT
-ml3:
-    
-
 ;    jsr logic ; returns A: display bitmap
 ;    jsr display
     jmp main_loop
@@ -125,15 +102,27 @@ ml3:
     lsr A
     lsr A
     lsr A
-    ora LCD_E        ; enable low
+    ora #LCD_E        ; enable low
     sta DATAPORT    ; write D7-D4
-    eor LCD_E       ; enable hight
+    eor #LCD_E       ; enable hight
+    sta DATAPORT    ; write D7-D4
     txa
     and #$0f        ; mask off lower bits
-    ora LCD_E
+    ora #LCD_E
     sta DATAPORT    ; write D3-D0
-    eor LCD_E
+    eor #LCD_E
+    sta DATAPORT    ; write D3-D0
     rts
+.endproc
+
+.proc lcd_write_string
+    lda #.HIBYTE(hello)
+    sta PARAMS+1
+    lda #.LOBYTE(hello)
+    sta PARAMS+2
+
+    lda (PARAMS)
+    tax 
 .endproc
 
 .proc lcd_init
@@ -141,15 +130,40 @@ ml3:
     sta SELECTPORT
     lda #$ff         ; set dataport to output
     sta DATAIO
-    lda #$28         ; 4-bit interface, 2 lines
+
+    ; Force a good known reset
+    lda #$03
+    sta DATAPORT
+    ora #LCD_E
+    sta DATAPORT
+    lda #$03
+    sta DATAPORT
+    ora #LCD_E
+    sta DATAPORT
+    lda #$03
+    sta DATAPORT
+    ora #LCD_E
+    sta DATAPORT
+
+    ; Set a 4 bit interface
+    lda #$02         
+    sta DATAPORT
+    ora #LCD_E       ; clock it in
+    sta DATAPORT
+    eor #LCD_E       ; clock it in
+    sta DATAPORT
+
+    lda #$28         ; function set
     jsr lcd_write_byte
-    lda #$0f         ; display on
+    lda #$0e        ; display on
     jsr lcd_write_byte
     rts
 .endproc
 
 
-; .segment "RODATA"
+.segment "RODATA"
+
+hello: .byte $06, 'H', 'e', 'l', 'l', 'o', '!'
 ; led_maps:
 ; .byte $00 ; 0000
 ; .byte $03 ; 0001

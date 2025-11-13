@@ -169,6 +169,7 @@ namespace cmd_io
         uint16_t wrap = static_cast<int>((divider - idivider) * 65536) -1 ;
         VERBOSE("wrap %u\r\n", wrap);
         // clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, idivider, wrap);
+        //
         clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_USB, idivider, wrap);
     }
 
