@@ -175,11 +175,11 @@ namespace cmd_io
 
     bool cmd_step_clock(CommandInput input = CommandInput())
     {
-        if (gpio_get_function(PIN_CLOCK) != GPIO_FUNC_SIO)
-        {
+//        if (gpio_get_function(PIN_CLOCK) != GPIO_FUNC_SIO)
+//        {
               gpio_init(PIN_CLOCK);
               gpio_set_dir(PIN_CLOCK, GPIO_OUT);
-        }
+//        }
         set_databus_out(false);
         gpio_put(PIN_CLOCK, 0);
         sleep_us(1);
@@ -280,7 +280,7 @@ namespace cmd_io
     bool cmd_reset(CommandInput input = CommandInput())
     {
         cancel_repeating_timer(&lfo_timer);
-        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+//        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         gpio_init(PIN_RESET);
         gpio_set_dir(PIN_RESET, GPIO_OUT);
         gpio_put(PIN_RESET, 0);
@@ -297,7 +297,7 @@ namespace cmd_io
         sleep_ms(50);
         gpio_put(PIN_RESET, 1);
 //        add_alarm_in_ms(500, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_RESET, 1); return 0; }, NULL, true);
-        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+//        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         return false;
     }
 

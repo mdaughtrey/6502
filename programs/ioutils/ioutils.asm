@@ -23,6 +23,8 @@ PARAMS:  .res 16
 KEYS: .byte 0
 ; MODE: .byte 0
 COUNT: .byte 0
+LCD_INDEX: .byte 0
+LCD_COUNT: .byte 0
 
 .segment "DATA"
 DATAPORT = ORAIRA
@@ -50,6 +52,7 @@ LCD_BUSY  = %10000000
     lda #$ff            ; Deselect all
     sta SELECTPORT       ; 
     jsr lcd_init
+    jsr lcd_write_string
 ;    lda #SELECT_LCD
 ;    sta SELECTPORT
 ;    lda #$ff
@@ -96,7 +99,7 @@ main_loop:
 ;.endproc
 
 ; A = byte to write
-.proc lcd_write_byte
+.proc lcd_instruction
     tax             ; save A
     lsr A           ; shift right 4
     lsr A
@@ -115,14 +118,47 @@ main_loop:
     rts
 .endproc
 
-.proc lcd_write_string
-    lda #.HIBYTE(hello)
-    sta PARAMS+1
-    lda #.LOBYTE(hello)
-    sta PARAMS+2
+; A = byte to write
+.proc lcd_data
+    tax             ; save A
+    lsr A           ; shift right 4
+    lsr A
+    lsr A
+    lsr A
+    ora #(LCD_E | LCD_RS)   ; enable low
+    sta DATAPORT    ; write D7-D4
+    eor #LCD_E       ; enable hight
+    sta DATAPORT    ; write D7-D4
+    txa
+    and #$0f        ; mask off lower bits
+    ora #(LCD_E | LCD_RS)
+    sta DATAPORT    ; write D3-D0
+    eor #LCD_E
+    sta DATAPORT    ; write D3-D0
+    rts
+.endproc
 
-    lda (PARAMS)
-    tax 
+.proc lcd_write_string
+;    lda #.HIBYTE(hello)
+;    sta PARAMS
+;    lda #.LOBYTE(hello)
+;    sta PARAMS+1
+;    lda PARAMS
+;    tax 
+    lda #$01
+    sta LCD_INDEX
+    lda hello       ; load the string length
+    sta LCD_COUNT
+loop:
+    lda LCD_INDEX
+    tay
+    lda hello, y  ; load the data
+    jsr lcd_data
+
+    inc LCD_INDEX
+    dec LCD_COUNT
+    bne loop
+    rts
 .endproc
 
 .proc lcd_init
@@ -153,10 +189,18 @@ main_loop:
     eor #LCD_E       ; clock it in
     sta DATAPORT
 
-    lda #$28         ; function set
-    jsr lcd_write_byte
+    lda #$28         ; function set, DL=4 bits, N=2 lines
+    jsr lcd_instruction
     lda #$0e        ; display on
-    jsr lcd_write_byte
+    jsr lcd_instruction
+    lda #$06        ; Entry mode
+    jsr lcd_instruction
+    lda #$80        ; DDRAM Address
+    jsr lcd_instruction
+    lda #$01        ; Clear
+    jsr lcd_instruction
+    lda #$02        ; Home
+    jsr lcd_instruction
     rts
 .endproc
 
