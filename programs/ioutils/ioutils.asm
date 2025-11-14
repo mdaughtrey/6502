@@ -24,7 +24,8 @@ KEYS: .byte 0
 ; MODE: .byte 0
 COUNT: .byte 0
 LCD_INDEX: .byte 0
-LCD_COUNT: .byte 0
+LCD_BASE: .word 0
+; LCD_COUNT: .byte 0
 
 .segment "DATA"
 DATAPORT = ORAIRA
@@ -52,7 +53,7 @@ LCD_BUSY  = %10000000
     lda #$ff            ; Deselect all
     sta SELECTPORT       ; 
     jsr lcd_init
-    jsr lcd_write_string
+    jsr lcd_counts
 ;    lda #SELECT_LCD
 ;    sta SELECTPORT
 ;    lda #$ff
@@ -138,26 +139,30 @@ main_loop:
     rts
 .endproc
 
+.proc lcd_counts
+    lda #.LOBYTE(counts)
+    sta LCD_BASE
+    lda #.HIBYTE(counts)
+    sta LCD_BASE+1
+    jsr lcd_write_string
+    rts
+.endproc
+
+; PARAM: string index
 .proc lcd_write_string
-;    lda #.HIBYTE(hello)
-;    sta PARAMS
-;    lda #.LOBYTE(hello)
-;    sta PARAMS+1
-;    lda PARAMS
-;    tax 
-    lda #$01
+    lda #$00
     sta LCD_INDEX
-    lda hello       ; load the string length
-    sta LCD_COUNT
 loop:
     lda LCD_INDEX
     tay
-    lda hello, y  ; load the data
+    lda (LCD_BASE), y  ; load the data
+    beq done
     jsr lcd_data
-
     inc LCD_INDEX
-    dec LCD_COUNT
-    bne loop
+    jmp loop
+done:
+    lda #$ff             ; Deselect LCD
+    sta SELECTPORT       ; 
     rts
 .endproc
 
@@ -207,7 +212,17 @@ loop:
 
 .segment "RODATA"
 
-hello: .byte $06, 'H', 'e', 'l', 'l', 'o', '!'
+hello: .asciiz "Hello!"
+one: .asciiz "one"
+two: .asciiz "two"
+three: .asciiz "three"
+four: .asciiz "four"
+five: .asciiz "five"
+six: .asciiz "six"
+seven: .asciiz "seven"
+eight: .asciiz "eight"
+nine: .asciiz "nine"
+counts: .word one, two, three, four, five, six, seven, eight, nine
 ; led_maps:
 ; .byte $00 ; 0000
 ; .byte $03 ; 0001
