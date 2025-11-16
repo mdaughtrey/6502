@@ -124,7 +124,7 @@ namespace rom_ram
                     linetext << ".";
                 }
             }
-            linetext << std::endl;
+//            linetext << std::endl;
         }
         gpio_set_dir_masked64(mask, 0);
         gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);

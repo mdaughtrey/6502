@@ -18,7 +18,7 @@ IER = IOBASE + 14       ; Interrupt enable register
 ORAIRA0 = ORAIRA        ; ORAIRA no handshake
 
 .segment "ZEROPAGE"
-PARAMS:  .res 16
+; PARAMS:  .res 16
 ; Key state
 KEYS: .byte 0
 ; MODE: .byte 0
@@ -126,13 +126,17 @@ main_loop:
     lsr A
     lsr A
     lsr A
-    ora #(LCD_E | LCD_RS)   ; enable low
+    ora #LCD_RS   ; enable low
+    sta DATAPORT    ; write D7-D4
+    ora #LCD_E   ; enable low
     sta DATAPORT    ; write D7-D4
     eor #LCD_E       ; enable hight
     sta DATAPORT    ; write D7-D4
     txa
     and #$0f        ; mask off lower bits
-    ora #(LCD_E | LCD_RS)
+    ora #LCD_RS   ; enable low
+    sta DATAPORT    ; write D7-D4
+    ora #LCD_E
     sta DATAPORT    ; write D3-D0
     eor #LCD_E
     sta DATAPORT    ; write D3-D0
@@ -140,11 +144,33 @@ main_loop:
 .endproc
 
 .proc lcd_counts
-    lda #.LOBYTE(counts)
+    lda #$00
+    pha
+;    sta PARAMS
+loop:
+    lda #$01        ; Clear
+    jsr lcd_instruction
+    lda #$02        ; Home
+    jsr lcd_instruction
+    pla
+    tax
+    pha
+;    ldx PARAMS
+    lda countslo, x
     sta LCD_BASE
-    lda #.HIBYTE(counts)
+    lda countshi, x
     sta LCD_BASE+1
     jsr lcd_write_string
+    pla
+    tax
+    inx
+    txa
+    pha
+;    inc PARAMS
+    cmp #$0a
+;    cmp PARAMS
+    bne loop
+done:
     rts
 .endproc
 
@@ -202,17 +228,15 @@ done:
     jsr lcd_instruction
     lda #$80        ; DDRAM Address
     jsr lcd_instruction
-    lda #$01        ; Clear
-    jsr lcd_instruction
-    lda #$02        ; Home
-    jsr lcd_instruction
+;    lda #$01        ; Clear
+;    jsr lcd_instruction
+;    lda #$02        ; Home
+;    jsr lcd_instruction
     rts
 .endproc
 
 
 .segment "RODATA"
-
-hello: .asciiz "Hello!"
 one: .asciiz "one"
 two: .asciiz "two"
 three: .asciiz "three"
@@ -222,7 +246,9 @@ six: .asciiz "six"
 seven: .asciiz "seven"
 eight: .asciiz "eight"
 nine: .asciiz "nine"
-counts: .word one, two, three, four, five, six, seven, eight, nine
+.define counts one, two, three, four, five, six, seven, eight, nine
+countslo: .lobytes counts
+countshi: .hibytes counts
 ; led_maps:
 ; .byte $00 ; 0000
 ; .byte $03 ; 0001

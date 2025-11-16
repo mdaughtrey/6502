@@ -285,7 +285,7 @@ namespace cmd_io
         gpio_set_dir(PIN_RESET, GPIO_OUT);
         gpio_put(PIN_RESET, 0);
 //        clocked_tasks.clear();
-        for (auto ii = 0; ii < 120; ii+=20)
+        for (auto ii = 0; ii < 7; ii++)
         {
             gpio_put(PIN_CLOCK, 0);
             sleep_ms(10);
@@ -296,6 +296,15 @@ namespace cmd_io
         }
         sleep_ms(50);
         gpio_put(PIN_RESET, 1);
+        for (auto ii = 0; ii < 7; ii++)
+        {
+            gpio_put(PIN_CLOCK, 0);
+            sleep_ms(10);
+            gpio_put(PIN_CLOCK, 1);
+            sleep_ms(10);
+//            add_alarm_in_ms(8+ii, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 0); return 0; }, NULL, true);
+//            add_alarm_in_ms(16+ii, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 1); return 0; }, NULL, true);
+        }
 //        add_alarm_in_ms(500, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_RESET, 1); return 0; }, NULL, true);
 //        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         return false;
