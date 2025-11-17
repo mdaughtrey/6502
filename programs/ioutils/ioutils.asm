@@ -25,7 +25,10 @@ KEYS: .byte 0
 COUNT: .byte 0
 LCD_INDEX: .byte 0
 LCD_BASE: .word 0
+LCD_DATA: .byte 0
 ; LCD_COUNT: .byte 0
+LCD_SAVE_INDEX: .byte 0
+LCD_SAVE: .res 256 
 
 .segment "DATA"
 DATAPORT = ORAIRA
@@ -48,6 +51,8 @@ LCD_BUSY  = %10000000
 
 .segment "CODE"
 .proc main
+    lda #$00
+    sta LCD_SAVE_INDEX
     lda #$ff            ; Set select bus to output
     sta SELECTIO
     lda #$ff            ; Deselect all
@@ -119,8 +124,18 @@ main_loop:
     rts
 .endproc
 
+.macro lcd_save
+    pha
+    ldy LCD_SAVE_INDEX
+    lda DATAPORT
+    sta LCD_SAVE, y
+    inc LCD_SAVE_INDEX
+    pla
+.endmacro
+
 ; A = byte to write
 .proc lcd_data
+    lda LCD_DATA
     tax             ; save A
     lsr A           ; shift right 4
     lsr A
@@ -128,18 +143,24 @@ main_loop:
     lsr A
     ora #LCD_RS   ; enable low
     sta DATAPORT    ; write D7-D4
+    lcd_save
     ora #LCD_E   ; enable low
     sta DATAPORT    ; write D7-D4
+    lcd_save
     eor #LCD_E       ; enable hight
     sta DATAPORT    ; write D7-D4
+    lcd_save
     txa
     and #$0f        ; mask off lower bits
     ora #LCD_RS   ; enable low
     sta DATAPORT    ; write D7-D4
+    lcd_save
     ora #LCD_E
     sta DATAPORT    ; write D3-D0
+    lcd_save
     eor #LCD_E
     sta DATAPORT    ; write D3-D0
+    lcd_save
     rts
 .endproc
 
@@ -148,10 +169,10 @@ main_loop:
     pha
 ;    sta PARAMS
 loop:
-    lda #$01        ; Clear
-    jsr lcd_instruction
-    lda #$02        ; Home
-    jsr lcd_instruction
+;    lda #$01        ; Clear
+;    jsr lcd_instruction
+;    lda #$02        ; Home
+;    jsr lcd_instruction
     pla
     tax
     pha
@@ -171,6 +192,7 @@ loop:
 ;    cmp PARAMS
     bne loop
 done:
+    jmp done
     rts
 .endproc
 
@@ -183,6 +205,7 @@ loop:
     tay
     lda (LCD_BASE), y  ; load the data
     beq done
+    sta LCD_DATA
     jsr lcd_data
     inc LCD_INDEX
     jmp loop
@@ -228,16 +251,17 @@ done:
     jsr lcd_instruction
     lda #$80        ; DDRAM Address
     jsr lcd_instruction
-;    lda #$01        ; Clear
-;    jsr lcd_instruction
-;    lda #$02        ; Home
-;    jsr lcd_instruction
+    lda #$01        ; Clear
+    jsr lcd_instruction
+    lda #$02        ; Home
+    jsr lcd_instruction
     rts
 .endproc
 
 
 .segment "RODATA"
-one: .asciiz "one"
+;one: .asciiz "one"
+one: .byte "one"
 two: .asciiz "two"
 three: .asciiz "three"
 four: .asciiz "four"
