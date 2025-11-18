@@ -38,7 +38,8 @@ SELECTIO = DDRB
 
 SELECT_KEYS = %11111110
 SELECT_DISPLAY = %11111101
-SELECT_LCD = %11111011
+SELECT_LCD_OUT = %11111011
+SELECT_LCD_IN = %11110011
 
 LCD_D0    = %00000001
 LCD_D1    = %00000010
@@ -105,7 +106,42 @@ main_loop:
 ;.endproc
 
 ; A = byte to write
+
+.macro lcd_save
+    pha
+    ldy LCD_SAVE_INDEX
+    lda DATAPORT
+    sta LCD_SAVE, y
+    inc LCD_SAVE_INDEX
+    pla
+.endmacro
+
+.macro lcd_select
+    lda #$00        ; set databus to input
+    sta DATAIO
+    lda #SELECT_LCD_OUT ; select LCD
+    sta SELECTPORT
+    lda #$ff
+    sta DATAIO
+.endmacro
+
+.macro lcd_deselect
+    lda #$00        ; set database to input
+    sta DATAIO
+    lda #$ff        ; deselect LCD
+    sta SELECTPORT
+.endmacro
+
+.macro lcd_busywait
+; :
+;    lda #$80
+;    bit DATAPORT
+;    beq :-
+    nop
+.endmacro
+
 .proc lcd_instruction
+    lcd_busywait
     tax             ; save A
     lsr A           ; shift right 4
     lsr A
@@ -124,17 +160,9 @@ main_loop:
     rts
 .endproc
 
-.macro lcd_save
-    pha
-    ldy LCD_SAVE_INDEX
-    lda DATAPORT
-    sta LCD_SAVE, y
-    inc LCD_SAVE_INDEX
-    pla
-.endmacro
-
 ; A = byte to write
 .proc lcd_data
+    lcd_busywait
     lda LCD_DATA
     tax             ; save A
     lsr A           ; shift right 4
@@ -143,56 +171,47 @@ main_loop:
     lsr A
     ora #LCD_RS   ; enable low
     sta DATAPORT    ; write D7-D4
-    lcd_save
     ora #LCD_E   ; enable low
     sta DATAPORT    ; write D7-D4
-    lcd_save
     eor #LCD_E       ; enable hight
     sta DATAPORT    ; write D7-D4
-    lcd_save
     txa
     and #$0f        ; mask off lower bits
     ora #LCD_RS   ; enable low
     sta DATAPORT    ; write D7-D4
-    lcd_save
     ora #LCD_E
     sta DATAPORT    ; write D3-D0
-    lcd_save
     eor #LCD_E
     sta DATAPORT    ; write D3-D0
-    lcd_save
     rts
 .endproc
 
 .proc lcd_counts
+    lcd_select
     lda #$00
     pha
-;    sta PARAMS
 loop:
-;    lda #$01        ; Clear
-;    jsr lcd_instruction
-;    lda #$02        ; Home
-;    jsr lcd_instruction
-    pla
-    tax
-    pha
-;    ldx PARAMS
-    lda countslo, x
-    sta LCD_BASE
-    lda countshi, x
-    sta LCD_BASE+1
-    jsr lcd_write_string
-    pla
+    lda #$01        ; Clear
+    jsr lcd_instruction
+    lda #$02        ; Home
+    jsr lcd_instruction
+    pla             ; Pull A
+    tax             ; Save to X (string index)
+    pha             ; push a
+    lda countslo, x     ; load pointer to string[x]
+    sta LCD_BASE        ; ...
+    lda countshi, x     ; ...
+    sta LCD_BASE+1      ; ...
+    jsr lcd_write_string     ; write out the string
+    pla             ; increment the string index
     tax
     inx
     txa
     pha
-;    inc PARAMS
-    cmp #$0a
-;    cmp PARAMS
+    cmp #$0a        ; done with all the strings?
     bne loop
 done:
-    jmp done
+    lcd_deselect
     rts
 .endproc
 
@@ -210,13 +229,13 @@ loop:
     inc LCD_INDEX
     jmp loop
 done:
-    lda #$ff             ; Deselect LCD
-    sta SELECTPORT       ; 
+;    lda #$ff             ; Deselect LCD
+;    sta SELECTPORT       ; 
     rts
 .endproc
 
 .proc lcd_init
-    lda #SELECT_LCD  ; select display
+    lda #SELECT_LCD_OUT  ; select display
     sta SELECTPORT
     lda #$ff         ; set dataport to output
     sta DATAIO
@@ -255,13 +274,14 @@ done:
     jsr lcd_instruction
     lda #$02        ; Home
     jsr lcd_instruction
+    lda #$ff
+    sta SELECTPORT
     rts
 .endproc
 
 
 .segment "RODATA"
-;one: .asciiz "one"
-one: .byte "one"
+one: .asciiz "one"
 two: .asciiz "two"
 three: .asciiz "three"
 four: .asciiz "four"
