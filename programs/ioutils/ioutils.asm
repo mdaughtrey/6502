@@ -20,9 +20,13 @@ KEYS: .byte 0
     jsr i2c_init
 ;    jsr chaser_init
 ;    jsr lcd_init
+    lda #$20
+    sta I2C_DEVICE
+    lda #$00
+    sta I2C_ADDR
 :
-;    jsr chaser
-;    jsr lcd_counts
+    jsr i2c_byte_from_addr
+;    inc I2C_DATA0
     jmp :-
 ;    lda #SELECT_LCD
 ;    sta SELECTPORT
