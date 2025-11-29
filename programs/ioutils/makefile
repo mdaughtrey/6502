@@ -1,18 +1,21 @@
 PROJECT=ioutils
-OBJ=ioutils
+ASMS=varstack.asm i2c.asm ioutils.asm via6522.asm
+OBJS=$(ASMS:.asm=.o)
 
-.phony: compile
+# .phony: compile
 
-compile:
-	ca65 --verbose --listing ${PROJECT}.lst ${OBJ}.asm
-	ld65 -C ${PROJECT}.cfg -o $(PROJECT).bin $(OBJ).o
+$(PROJECT): $(OBJS)
+	ld65 -C ${PROJECT}.cfg --mapfile $(PROJECT).map -o $(PROJECT).bin $(OBJS)
 	xxd -i rom1.bin > ${PROJECT}.h
 	cp ${PROJECT}.h ../../rom/src
+
+%.o: %.asm
+	ca65 --verbose --listing $(<).lst -o $@ $<
 
 dump:
 	xxd -i rom1.bin > ${PROJECT}.h
 
 clean:
-	rm -f *.o *.bin
+	rm -f *.o *.bin *.lst
 
 

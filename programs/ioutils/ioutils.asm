@@ -1,29 +1,25 @@
+.include "via6522.inc"
 
-.include    "io.inc"
-;.import     "i2c.inc", i2c_init
-.segment "CODE"
-    jmp     main
-.include    "i2c.inc"
-; .include    "lcd.inc"
+.import i2c_init, i2c_byte_from_addr
+; .import I2C_DEVICE: zeropage, I2C_ADDR: zeropage
+.import DATAIO, DATAPORT, SELECTPORT
+.import var_init, var_push, var_pop
 
-.segment "ZEROPAGE"
-; PARAMS:  .res 16
+.import via6522_init
+
+;.segment "ZEROPAGE"
 ; Key state
-KEYS: .byte 0
+;KEYS: .byte 0
 
 .segment "CODE"
 .proc main
-    lda #$ff            ; Set select bus to output
-    sta SELECTIO
-    lda #$ff            ; Deselect all
-    sta SELECTPORT       ; 
+    jsr var_init
+    jsr via6522_init
     jsr i2c_init
-;    jsr chaser_init
-;    jsr lcd_init
-    lda #$20
-    sta I2C_DEVICE
-    lda #$00
-    sta I2C_ADDR
+    lda #$20        ; I2C Device
+    jsr var_push
+    lda #$00        ; I2C Register
+    jsr var_push
     jsr i2c_byte_from_addr
 ;    inc I2C_DATA0
 :
@@ -74,21 +70,5 @@ main_loop:
 ;.endproc
 
 ; A = byte to write
-
-
-; j.proc chaser_init
-; j    lda #SELECT_DISPLAY
-; j    sta SELECTPORT
-; j    lda #$ff
-; j    sta DATAIO
-; j    rts
-; j.endproc
-; j
-; j.proc chaser
-; j    fixed_wait
-; j    inc DATAPORT
-; j    rts
-; j.endproc
-
 .segment "RESETVEC"
-.word $c200
+.word main

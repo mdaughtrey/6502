@@ -1,4 +1,5 @@
-
+.ifndef VIA6522_INC
+.define VIA6522_INC
 IOBASE = $4000
 ORBIRB = IOBASE          ; Write = output register B, Read = input register B
 ORAIRA = IOBASE + 1     ; Write = output register A, Read = input register A
@@ -17,11 +18,6 @@ IFR = IOBASE + 13       ; Interrupt flag register
 IER = IOBASE + 14       ; Interrupt enable register
 ORAIRA0 = ORAIRA        ; ORAIRA no handshake
 
-.segment "DATA"
-DATAPORT = ORAIRA
-DATAIO = DDRA
-SELECTPORT = ORBIRB
-SELECTIO = DDRB
 
 SELECT_NONE = %11111111
 SELECT_KEYS = %11111110
@@ -29,3 +25,7 @@ SELECT_KEYS = %11111110
 ;SELECT_LCD_OUT = %11111011
 SELECT_RESERVED0 = %10000000    ; I2C
 SELECT_RESERVED1 = %01000000    ; I2C
+
+; .export DATAIO, DATAPORT, I2C_ADDR, I2C_DEVICE, SELECTIO, SELECTPORT
+
+.endif ; VIA6522_INC
