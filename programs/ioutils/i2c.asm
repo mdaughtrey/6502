@@ -188,25 +188,33 @@ ack_nak:
     jsr i2c_write
     ; Test for error
 ;    lda I2C_FLAGS
-;    asl
-;    bcc ack0
+;    cmp #I2C_FLAG_NAK
+;    bne ack0
+;    i2c_stop
 ;    rts                 ; got a NAK, bail
 
+; ---------------------------------------------
+;
+; Set the register address 
+;
+; ---------------------------------------------
 ;ack0:
     lda #8
     sta I2C_NUM_BITS
-    lda #I2C_FLAG_READ
+;    lda #I2C_FLAG_READ
+    lda #0
     sta I2C_FLAGS
     lda I2C_HEADER1
     jsr i2c_write
     ; Test for error
 ;    lda I2C_FLAGS
-;    rol
-;    bcc ack1
+;    cmp #I2C_FLAG_NAK
+;    bne ack1
 ;    i2c_stop
-;    rts
-
+;    rts                 ; got a NAK, bail
 ;ack1:
+    i2c_stop
+
 ; ---------------------------------------------
 ;
 ; Write out the device address with read flag
@@ -219,12 +227,19 @@ ack_nak:
     sta I2C_NUM_BITS
     lda I2C_HEADER0
     jsr i2c_write
+    ; Test for error
+;    lda I2C_FLAGS
+;    cmp #I2C_FLAG_NAK
+;    bne ack2
+;    i2c_stop
+;    rts                 ; got a NAK, bail
 
 ; ---------------------------------------------
 ;
 ; Read the register data
 ;
 ; ---------------------------------------------
+;ack2:
     lda #8
     sta I2C_NUM_BITS
     lda #0
@@ -240,10 +255,10 @@ ack_nak:
 ;
 ; Write an I2C frame to I2C_DEVICE/I2C_ADD
 ; from I2C_BUFFER for I2C_LENGTH frames
-; I2C_DEVICE
-; I2C_ADDR
-; I2C_BUFFER[I2C_BUFFER_INDEX]
-; I2C_BUFFER_LENGTH
+; VARSTACK:
+;   0: Device
+;   1: Register Addr
+;   2: Value
 ; Return:
 ;   I2C_BUFFER_INDEX
 ;   I2C_BUFFER_LENGTH
@@ -258,31 +273,39 @@ ack_nak:
 ; Write out the device address with write flag
 ;
 ; ---------------------------------------------
-    lda I2C_DEVICE
-    asl
-    sta I2C_BUFFER
     lda #I2C_FLAG_WRITE
     sta I2C_FLAGS
     lda #7
     sta I2C_NUM_BITS
+    jsr var_pop     ; Device Address
     jsr i2c_write
 
 ; ---------------------------------------------
 ;
-; Send the register address to write to
+; Set the register address 
 ;
 ; ---------------------------------------------
-    lda I2C_ADDR
-    sta I2C_BUFFER
     lda #0
     sta I2C_FLAGS
     lda #8
     sta I2C_NUM_BITS
+    jsr var_pop     ; Register Address
+    jsr i2c_write
+
+; ---------------------------------------------
+;
+; Set the register data 
+;
+; ---------------------------------------------
+    lda #0
+    sta I2C_FLAGS
+    lda #8
+    sta I2C_NUM_BITS
+    jsr var_pop     ; Register Data
     jsr i2c_write
     i2c_stop
-
 
     rts
 .endproc
 
-.export i2c_byte_from_addr, i2c_init, I2C_ADDR, I2C_DEVICE
+.export i2c_byte_to_addr, i2c_byte_from_addr, i2c_init, I2C_ADDR, I2C_DEVICE

@@ -43,13 +43,13 @@
 
 .macro i2c_stop
     lda SELECTPORT      ; stop condition, SCL is Low
-    eor #I2C_SDA         ; SDA Low
+    and #NOT_I2C_SDA         ; SDA Low
     sta SELECTPORT      ; ...
     ora #I2C_SCL         ; SCL High
     sta SELECTPORT      ; ...
     ora #I2C_SDA        ; SDA High
     sta SELECTPORT      ; ...
-    eor #I2C_SCL        ; SCK Low
+    and #NOT_I2C_SCL        ; SCK Low
     sta SELECTPORT      ; ...
 .endmacro
 

@@ -1,5 +1,5 @@
 PROJECT=ioutils
-ASMS=varstack.asm i2c.asm ioutils.asm via6522.asm
+ASMS=chaser.asm varstack.asm i2c.asm ioutils.asm via6522.asm
 OBJS=$(ASMS:.asm=.o)
 
 # .phony: compile
