@@ -1,4 +1,5 @@
 .segment "ZEROPAGE"
+VARSTACK_MARKER: .byte $bb
 VARSTACK: .res 8
 STACK_INDEX: .byte 0
 

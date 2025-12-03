@@ -5,6 +5,7 @@
 .import var_push, var_pop
 
 .segment "ZEROPAGE"
+I2C_MARKER:     .byte $aa
 I2C_DEVICE:     .byte 0     ; I2C Device Address (7 bits, unshifted)
 I2C_ADDR:       .byte 0     ; I2C Register Address
 I2C_FLAGS:      .byte 0     ; Control flags
@@ -89,13 +90,14 @@ ack_nak:
     lda SELECTPORT
     scl_high
     ; read dataport for ack/nak
+;     lda SELECTPORT
+;     and #I2C_SDA
+;     cmp #I2C_SDA
+;     bne ack                     ; low = ack
+;     lda #I2C_FLAG_NAK
+;     sta I2C_FLAGS
+; ack:
     lda SELECTPORT
-    and #I2C_SDA
-    cmp #I2C_SDA
-    bne ack                     ; low = ack
-    lda #I2C_FLAG_NAK
-    sta I2C_FLAGS
-ack:
     scl_low
     sda_out
     rts
@@ -155,19 +157,19 @@ ack_nak:
 ;
 ; Read data from I2C_DEVICE/I2C_ADDR
 ; VARSTACK
-;   0: Register address
-;   1: Device address
+;   0: Device
+;   1: Register Addr
 ; Return:
 ;   I2C_BUFFER
 ;   I2C_BUFFER_LENGTH
 ;
 ; ---------------------------------------------
 .proc i2c_byte_from_addr
-    jsr var_pop             ; register
-    sta I2C_HEADER1
     jsr var_pop             ; device
     asl
     sta I2C_HEADER0
+    jsr var_pop             ; register
+    sta I2C_HEADER1
     lda #0
     sta I2C_FLAGS
     ; Set start condition
@@ -226,6 +228,7 @@ ack_nak:
     lda #7
     sta I2C_NUM_BITS
     lda I2C_HEADER0
+;    jsr var_pop
     jsr i2c_write
     ; Test for error
 ;    lda I2C_FLAGS
@@ -265,6 +268,11 @@ ack_nak:
 ;
 ; ---------------------------------------------
 .proc i2c_byte_to_addr
+    jsr var_pop             ; device
+    asl
+    sta I2C_HEADER0
+    jsr var_pop             ; register
+    sta I2C_HEADER1
     ; Set start condition
     i2c_start
 
@@ -277,7 +285,7 @@ ack_nak:
     sta I2C_FLAGS
     lda #7
     sta I2C_NUM_BITS
-    jsr var_pop     ; Device Address
+    lda I2C_HEADER0
     jsr i2c_write
 
 ; ---------------------------------------------
@@ -289,7 +297,7 @@ ack_nak:
     sta I2C_FLAGS
     lda #8
     sta I2C_NUM_BITS
-    jsr var_pop     ; Register Address
+    lda I2C_HEADER1
     jsr i2c_write
 
 ; ---------------------------------------------

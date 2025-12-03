@@ -39,7 +39,7 @@ namespace cmd_io
     void breakpoint_check(void);
     void set_clock_frequency(float frequency_hz);
 //    void memory_operation(void);
-    void run_clocked_tasks(void);
+    void run_clocked_tasks(bool clock_state);
     void assert_address_bus(uint16_t addr);
     void assert_databus(uint8_t data);
 //    std::deque<void (*)(void)> task_queue;
@@ -98,17 +98,18 @@ namespace cmd_io
     static bool lfo_timer_callback(repeating_timer_t *t)
     {
         clock_pin_state = !clock_pin_state;
-        if (clock_pin_state)
-        {   
-            run_clocked_tasks();
-        }
         gpio_put(PIN_CLOCK, clock_pin_state);
+        run_clocked_tasks(clock_pin_state);
         return true;
     }
 
-    void run_clocked_tasks(void)
+    void run_clocked_tasks(bool clock_state)
     {
         VERBOSE("Run_clocked_tasks: %u tasks", clocked_tasks.size())
+        if (!clocked_tasks.empty())
+        {
+            log_queue.push_back(clock_state ? "Clock 1" : "Clock 0");
+        }
         for (auto iter = clocked_tasks.begin(); iter != clocked_tasks.end(); iter++)
         {
             VERBOSE("Clocked task %s", iter->first.c_str())
@@ -177,23 +178,25 @@ namespace cmd_io
     {
 //        if (gpio_get_function(PIN_CLOCK) != GPIO_FUNC_SIO)
 //        {
-              gpio_init(PIN_CLOCK);
-              gpio_set_dir(PIN_CLOCK, GPIO_OUT);
+//              gpio_init(PIN_CLOCK);
+//              gpio_set_dir(PIN_CLOCK, GPIO_OUT);
 //        }
-        set_databus_out(false);
         gpio_put(PIN_CLOCK, 0);
         sleep_us(1);
-        uint64_t pins = gpioc_hilo_in_get();
-//        if (pins & RW_MASK) // Read
-//        {
-            run_clocked_tasks();
-//        }
+        if (!clocked_tasks.empty())
+        {
+            run_clocked_tasks(0);
+        }
         gpio_put(PIN_CLOCK, 1);
         sleep_us(1);
-        if (!(pins & RW_MASK)) // Write
+        if (!clocked_tasks.empty())
         {
-            run_clocked_tasks();
+            run_clocked_tasks(1);
         }
+//        if (!(pins & RW_MASK)) // Write
+//        {
+//            run_clocked_tasks();
+//        }
         return false;
 
     }
@@ -279,7 +282,7 @@ namespace cmd_io
 
     bool cmd_reset(CommandInput input = CommandInput())
     {
-        cancel_repeating_timer(&lfo_timer);
+        set_clock_frequency(0.0);
 //        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         gpio_init(PIN_RESET);
         gpio_set_dir(PIN_RESET, GPIO_OUT);

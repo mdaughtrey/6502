@@ -15,18 +15,20 @@
 
 .segment "CODE"
 .proc main
+    ldx #$ff
+    txs
     jsr var_init
     jsr via6522_init
     jsr i2c_init
     jsr chaser_init
-;    lda #$20        ; I2C Device
-;    jsr var_push
 ;    lda #$00        ; I2C Register
+;    jsr var_push
+;    lda #$20        ; I2C Device
 ;    jsr var_push
 ;    jsr i2c_byte_from_addr
 ;    inc I2C_DATA0
 :
-;    jsr chaser_loop
+    jsr chaser_loop
     jmp :-
 ;    lda #SELECT_LCD
 ;    sta SELECTPORT
@@ -40,6 +42,34 @@ main_loop:
     jmp main_loop
 
 .endproc                ; main
+
+.proc vttest
+:
+    lda #$11
+    jsr var_push
+    lda #$22
+    jsr var_push
+    lda #$33
+    jsr var_push
+    lda #$44
+    jsr var_push
+    lda #$55
+    jsr var_push
+    lda #$66
+    jsr var_push
+    lda #$77
+    jsr var_push
+
+    jsr var_pop
+    jsr var_pop
+    jsr var_pop
+    jsr var_pop
+    jsr var_pop
+    jsr var_pop
+    jsr var_pop
+    jsr var_pop
+    jmp :-
+.endproc ; vttest
 
 ; return: a = keys pressed bitmask (....bbbb)
 .proc read_keys

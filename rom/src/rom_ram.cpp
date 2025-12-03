@@ -12,6 +12,7 @@
 #include "pin_defs.h"
 #include "cmd_io_internal.h"
 #include "ioutils.h"
+// #include "varstacktest.h"
 
 namespace rom_ram
 {
@@ -190,7 +191,7 @@ namespace rom_ram
 
     bool cmd_upload_rom_image(CommandInput input = CommandInput())
     {
-        printf("Loading...");
+        printf("Loading %d bytes to %04x...", rom1_bin_len, 0x0000);
         write_to_memory(rom1_bin, rom1_bin_len, 0x0000);
         printf(" Done.\r\n");
         return false;

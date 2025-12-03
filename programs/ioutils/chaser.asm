@@ -6,8 +6,12 @@
 
 .export chaser_init, chaser_loop
 
+.segment "DATA"
+mycount: .byte 1
+
+.segment "CODE"
 .proc chaser_init
-    lda #$ff         ; Set IODIRA to outputs
+    lda #$00         ; Set IODIRA to outputs
     jsr var_push
     lda #IODIRA    ; Reg address
     jsr var_push
@@ -19,12 +23,14 @@
 
 
 .proc chaser_loop
-    lda #$aa
+    lda mycount
     jsr var_push
     lda #GPIOA
     jsr var_push
     lda #$20        ; I2C Device
     jsr var_push
     jsr i2c_byte_to_addr
+    inc mycount
     rts
 .endproc
+
