@@ -54,8 +54,9 @@ namespace cmd_io
 
     void init(void)
     {
-         cmd_init_buses(CommandInput());
-         cmd_reset(CommandInput());
+        gpio_init(PIN_RESET);
+        gpio_set_dir(PIN_RESET, GPIO_OUT);
+        gpio_put(PIN_RESET, 1);
     }
 
     bool cmd_init_buses(CommandInput input = CommandInput())
@@ -71,8 +72,6 @@ namespace cmd_io
             }
         }
         set_address_bus_out(false);
-        gpio_set_dir(PIN_CLOCK, GPIO_OUT);
-        gpio_put(PIN_CLOCK, 1);
         gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         return false;
     }
@@ -181,14 +180,17 @@ namespace cmd_io
 //              gpio_init(PIN_CLOCK);
 //              gpio_set_dir(PIN_CLOCK, GPIO_OUT);
 //        }
+
+        gpio_init(PIN_CLOCK);
+        gpio_set_dir(PIN_CLOCK, GPIO_OUT);
         gpio_put(PIN_CLOCK, 0);
-        sleep_us(1);
+        sleep_ms(1);
         if (!clocked_tasks.empty())
         {
             run_clocked_tasks(0);
         }
         gpio_put(PIN_CLOCK, 1);
-        sleep_us(1);
+        sleep_ms(1);
         if (!clocked_tasks.empty())
         {
             run_clocked_tasks(1);
@@ -282,34 +284,42 @@ namespace cmd_io
 
     bool cmd_reset(CommandInput input = CommandInput())
     {
-        set_clock_frequency(0.0);
-//        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         gpio_init(PIN_RESET);
         gpio_set_dir(PIN_RESET, GPIO_OUT);
-        gpio_put(PIN_RESET, 0);
-//        clocked_tasks.clear();
-        for (auto ii = 0; ii < 7; ii++)
-        {
-            gpio_put(PIN_CLOCK, 0);
-            sleep_ms(10);
-            gpio_put(PIN_CLOCK, 1);
-            sleep_ms(10);
-//            add_alarm_in_ms(8+ii, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 0); return 0; }, NULL, true);
-//            add_alarm_in_ms(16+ii, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 1); return 0; }, NULL, true);
-        }
-        sleep_ms(50);
         gpio_put(PIN_RESET, 1);
-        for (auto ii = 0; ii < 7; ii++)
+        set_clock_frequency(0.0);
+        gpio_init(PIN_CLOCK);
+        gpio_set_dir(PIN_CLOCK, GPIO_OUT);
+        gpio_put(PIN_CLOCK, 1);
+        cmd_init_buses(CommandInput());
+        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+
+        gpio_put(PIN_RESET, 0);
+        for (auto ii = 0; ii < 2; ii++)
         {
             gpio_put(PIN_CLOCK, 0);
             sleep_ms(10);
             gpio_put(PIN_CLOCK, 1);
             sleep_ms(10);
-//            add_alarm_in_ms(8+ii, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 0); return 0; }, NULL, true);
-//            add_alarm_in_ms(16+ii, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 1); return 0; }, NULL, true);
         }
+        gpio_put(PIN_RESET, 1);
+//        for (auto ii = 0; ii < 8; ii++)
+//        {
+//            gpio_put(PIN_CLOCK, 0);
+//            sleep_ms(10);
+//            gpio_put(PIN_CLOCK, 1);
+//            sleep_ms(10);
+//        }
+//        for (auto ii = 0; ii < 2; ii++)
+//        {
+//            gpio_put(PIN_CLOCK, 0);
+//            sleep_ms(10);
+//            gpio_put(PIN_CLOCK, 1);
+//            sleep_ms(10);
+////            add_alarm_in_ms(8+ii, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 0); return 0; }, NULL, true);
+////            add_alarm_in_ms(16+ii, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 1); return 0; }, NULL, true);
+//        }
 //        add_alarm_in_ms(500, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_RESET, 1); return 0; }, NULL, true);
-//        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         return false;
     }
 

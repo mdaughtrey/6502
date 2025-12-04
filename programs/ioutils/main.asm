@@ -15,8 +15,7 @@
 
 .segment "CODE"
 .proc main
-    ldx #$ff
-    txs
+    sei
     jsr var_init
     jsr via6522_init
     jsr i2c_init
