@@ -1,8 +1,11 @@
 .include "via6522.inc"
-.include "i2c.inc"
+; .include "i2c.inc"
 
 .import DATAPORT, DATAIO, SELECTPORT, SELECTIO
 .import var_push, var_pop
+
+
+I2C_ADDR_LCD = $20    ; LCD Display I2C address
 
 .segment "ZEROPAGE"
 I2C_MARKER:     .byte $aa
@@ -19,7 +22,67 @@ I2C_HEADER0:       .byte 0 ; Store device address
 I2C_HEADER1:       .byte 0 ; Store register address
 I2C_BUFFER: .res 8          ; read/write/buffer
 
+
 .segment "CODE"
+.macro scl_high
+    ora #I2C_SCL
+    sta SELECTPORT
+.endmacro
+
+.macro scl_low
+    and #NOT_I2C_SCL
+    sta SELECTPORT
+.endmacro
+
+.macro sda_high
+    ora #I2C_SDA
+    sta SELECTPORT
+.endmacro
+
+.macro sda_low
+    and #NOT_I2C_SDA
+    sta SELECTPORT
+.endmacro
+
+.macro sda_in
+    lda SELECTIO        ; set SDA to input
+    and #NOT_I2C_SDA
+    sta SELECTIO
+.endmacro
+
+.macro sda_out
+    lda SELECTIO        ; set SDA to input
+    ora #I2C_SDA
+    sta SELECTIO
+.endmacro
+
+.macro i2c_start
+    lda SELECTPORT      
+    scl_low
+    sda_high
+    scl_high
+    sda_low
+    scl_low
+.endmacro
+
+.macro i2c_stop
+    lda SELECTPORT      ; stop condition, SCL is Low
+    and #NOT_I2C_SDA         ; SDA Low
+    sta SELECTPORT      ; ...
+    ora #I2C_SCL         ; SCL High
+    sta SELECTPORT      ; ...
+    ora #I2C_SDA        ; SDA High
+    sta SELECTPORT      ; ...
+    and #NOT_I2C_SCL        ; SCK Low
+    sta SELECTPORT      ; ...
+    and #NOT_I2C_SDA         ; SDA Low
+    sta SELECTPORT      ; ...
+.endmacro
+
+I2C_SCL = %10000000    ; 6522 SELECTPORT D7
+NOT_I2C_SCL = %01111111
+I2C_SDA = %01000000    ; 6522 SELECTPORT D6
+NOT_I2C_SDA = %10111111
 .proc   i2c_init
     lda SELECTPORT
     sda_high

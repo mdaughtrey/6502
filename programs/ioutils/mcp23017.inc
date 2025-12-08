@@ -24,4 +24,6 @@ GPIOB    = $13      ; GPIO B
 OLATA    = $14      ; Output Latch A
 OLATB    = $15      ; Output Latch B
 
+I2C_ADDR_LCD = $20
+
 .endif ;  MCP23017_INC

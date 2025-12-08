@@ -1,5 +1,5 @@
 PROJECT=ioutils
-ASMS=main.asm chaser.asm varstack.asm i2c.asm via6522.asm
+ASMS=main.asm chaser.asm varstack.asm i2c.asm via6522.asm lcd.asm
 OBJS=$(ASMS:.asm=.o)
 
 # .phony: compile
@@ -10,7 +10,7 @@ $(PROJECT): $(OBJS)
 	cp ${PROJECT}.h ../../rom/src
 
 %.o: %.asm
-	ca65 --verbose --listing $(<).lst -o $@ $<
+	ca65 --verbose --cpu 65c02 --listing $(<).lst -o $@ $<
 
 dump:
 	xxd -i rom1.bin > ${PROJECT}.h

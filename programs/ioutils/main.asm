@@ -1,11 +1,11 @@
 .include "via6522.inc"
-;.include "chaser.inc"
+.include "lcd.inc"
+.include "chaser.inc"
 
 .import i2c_init, i2c_byte_from_addr
 ; .import I2C_DEVICE: zeropage, I2C_ADDR: zeropage
 .import DATAIO, DATAPORT, SELECTPORT
 .import var_init, var_push, var_pop
-.import chaser_init, chaser_loop
 
 .import via6522_init
 
@@ -19,7 +19,8 @@
     jsr var_init
     jsr via6522_init
     jsr i2c_init
-    jsr chaser_init
+    jsr lcd_init
+;    jsr chaser_init
 ;    lda #$00        ; I2C Register
 ;    jsr var_push
 ;    lda #$20        ; I2C Device
@@ -27,7 +28,8 @@
 ;    jsr i2c_byte_from_addr
 ;    inc I2C_DATA0
 :
-    jsr chaser_loop
+    jsr lcd_loop
+;    jsr chaser_loop
     jmp :-
 ;    lda #SELECT_LCD
 ;    sta SELECTPORT
