@@ -45,26 +45,31 @@ Command commands_top[] = {
 };
 
 Command commands_io[] = {
+// {
+//     'a', "Assert Address Bus (Hex)",
+//     Validator("[0-9a-fA-F]{4}", "Enter addr XXXX"),
+//     cmd_io::cmd_assert_address_bus 
+// },
+// {'b', "Bus Inactive", Validator(""), cmd_io::cmd_bus_inactive },
+// {'B', "Bus Active", Validator(""), cmd_io::cmd_bus_active },
+// {'c', "Clock Line Low", Validator(""), cmd_io::cmd_clock_line_low },
+// {'C', "Clock Line High", Validator(""), cmd_io::cmd_clock_line_high },
 {
-    'a', "Assert Address Bus (Hex)",
-    Validator("[0-9a-fA-F]{4}", "Enter addr XXXX"),
-    cmd_io::cmd_assert_address_bus 
-},
-{'b', "Bus Inactive", Validator(""), cmd_io::cmd_bus_inactive },
-{'B', "Bus Active", Validator(""), cmd_io::cmd_bus_active },
-{'c', "Clock Line Low", Validator(""), cmd_io::cmd_clock_line_low },
-{'C', "Clock Line High", Validator(""), cmd_io::cmd_clock_line_high },
-{
-    'f', "Set Clock Frequency",
+    'c', "Set Clock Frequency",
     Validator("(\\d+)", "Hz"),
     cmd_io::cmd_set_clock_frequency 
 },
 {
-    'd', "Assert Databus (Hex)",
-    Validator("[0-9a-fA-F]{2}", "Enter hex value"),
-    cmd_io::cmd_assert_databus 
+    'C', "Stop Clock",
+    Validator(""),
+    cmd_io::cmd_clock_stop
 },
-{'D', "Deassert Databus", Validator(""), cmd_io::cmd_deassert_databus },
+// {
+//     'd', "Assert Databus (Hex)",
+//     Validator("[0-9a-fA-F]{2}", "Enter hex value"),
+//     cmd_io::cmd_assert_databus 
+// },
+// {'D', "Deassert Databus", Validator(""), cmd_io::cmd_deassert_databus },
 {'h', "help", Validator(""), cmd_help },
 {
     'i', "I/O Value",
@@ -91,8 +96,8 @@ Command commands_io[] = {
 {'t', "Clear Clocked Tasks", Validator(""), cmd_io::cmd_clear_clocked_tasks },
 {'v', "Verbose logging", Validator(""), [](CommandInput) -> bool { cmd_io::cmd_verbose_logging(true); return false; }},
 {'V', "Terse logging", Validator(""), [](CommandInput) ->bool { cmd_io::cmd_verbose_logging(false); return false; }},
-{'w', "Write Enable Low (write)", Validator("*"), cmd_io::cmd_we_lo },
-{'W', "Write Enable High (read)", Validator("*"), cmd_io::cmd_we_hi },
+// {'w', "Write Enable Low (write)", Validator("*"), cmd_io::cmd_we_lo },
+// {'W', "Write Enable High (read)", Validator("*"), cmd_io::cmd_we_hi },
 {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
 {0x01, "", Validator(""), [](CommandInput input)->bool { return false;} }
 };

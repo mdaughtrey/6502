@@ -25,7 +25,7 @@
 #define VERBOSE(...) \
 if (verbose) \
 { \
-    char buffer[64]; \
+    char buffer[256]; \
     sprintf(buffer, __VA_ARGS__); \
     log_queue.push_back(buffer); \
 }
@@ -35,12 +35,13 @@ namespace cmd_io
     void set_databus_out(bool out);
     void set_address_bus_out(bool out);
     bool cmd_pin_status(CommandInput input);
+    bool cmd_init_buses(CommandInput);
     void pin_status(void);
     void breakpoint_check(void);
     void set_clock_frequency(float frequency_hz);
 //    void memory_operation(void);
     void run_clocked_tasks(bool clock_state);
-    void assert_address_bus(uint16_t addr);
+//    void assert_address_bus(uint16_t addr);
     void assert_databus(uint8_t data);
 //    std::deque<void (*)(void)> task_queue;
     std::list<std::pair<std::string, void (*)(void)> > clocked_tasks;
@@ -57,18 +58,32 @@ namespace cmd_io
         gpio_init(PIN_RESET);
         gpio_set_dir(PIN_RESET, GPIO_OUT);
         gpio_put(PIN_RESET, 1);
+        cmd_init_buses(CommandInput());
     }
 
     bool cmd_init_buses(CommandInput input = CommandInput())
     {
-        gpio_init(PIN_BUS_ENABLE);
-        gpio_set_dir(PIN_BUS_ENABLE, GPIO_OUT);
+        uint64_t mask = RESET_MASK | CLOCK_MASK | IRQ_MASK | NMI_MASK | PHI0_MASK | BE_MASK | READY_MASK;
+        VERBOSE("Pin initialization mask is %s", std::bitset<64>(mask).to_string().c_str());
+        for (auto ii = 0; ii < 64; ii++)
+        {
+            if (mask & (1ull<<ii))
+            {
+                gpio_init(ii);
+                VERBOSE("Setting %d to OUT", ii);
+                gpio_set_dir(ii, GPIO_OUT);
+                gpio_put(ii, 1);
+            }
+        }
+//        gpio_init(PIN_BUS_ENABLE);
+//        gpio_set_dir(PIN_BUS_ENABLE, GPIO_OUT);
         gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         for (auto ii = 0; ii < 64; ii++)
         {
-            if ((1 << ii) & (ADDR_MASK | DATA_MASK | CLOCK_MASK | RESET_MASK | RW_MASK))
+            if ((1ull << ii) & (ADDR_MASK | DATA_MASK | RW_MASK))
             {
                 gpio_init(ii);
+                VERBOSE("Setting %d to IN", ii);
             }
         }
         set_address_bus_out(false);
@@ -240,9 +255,9 @@ namespace cmd_io
     void pin_status(void)
     {
         char buffer[128];
-        sprintf(buffer, "     Data          Addr                   Data               b R R     C      AddrH    AddrL");
+        sprintf(buffer, "     Data          Addr                   Data     SRRni rC B                 AddrH    AddrL");
         log_queue.push_back(buffer);
-        sprintf(buffer, ".... ..    .. .... .... ........ ........ ........ ........ .E.w.S.. ..K..... FEDCBA98 76543210");
+        sprintf(buffer, ".... ..    .. .... .... ........ ........ ........ YYWIQ.SK e....... ........ FEDCBA98 76543210");
         log_queue.push_back(buffer);
         uint64_t pins = gpioc_hilo_in_get();
         uint64_t mask = (static_cast<uint64_t>(sio_hw->gpio_hi_oe) << 32) | static_cast<uint64_t>(sio_hw->gpio_oe);
@@ -276,33 +291,36 @@ namespace cmd_io
 //        return false;
 //    }
 
-    bool cmd_disable_memory(CommandInput = CommandInput())
-    {
+//    bool cmd_disable_memory(CommandInput = CommandInput())
+//    {
 //        clocked_tasks.erase("Memory");
-        return false;
-    }
+//        return false;
+//    }
 
     bool cmd_reset(CommandInput input = CommandInput())
     {
-        gpio_init(PIN_RESET);
-        gpio_set_dir(PIN_RESET, GPIO_OUT);
-        gpio_put(PIN_RESET, 1);
-        set_clock_frequency(0.0);
-        gpio_init(PIN_CLOCK);
-        gpio_set_dir(PIN_CLOCK, GPIO_OUT);
-        gpio_put(PIN_CLOCK, 1);
-        cmd_init_buses(CommandInput());
-        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
-
+//        gpio_init(PIN_RESET);
+//        gpio_set_dir(PIN_RESET, GPIO_OUT);
         gpio_put(PIN_RESET, 0);
-        for (auto ii = 0; ii < 2; ii++)
-        {
-            gpio_put(PIN_CLOCK, 0);
-            sleep_ms(10);
-            gpio_put(PIN_CLOCK, 1);
-            sleep_ms(10);
-        }
+        sleep_ms(100);
         gpio_put(PIN_RESET, 1);
+        sleep_ms(100);
+//        set_clock_frequency(0.0);
+//        gpio_init(PIN_CLOCK);
+//        gpio_set_dir(PIN_CLOCK, GPIO_OUT);
+//        gpio_put(PIN_CLOCK, 1);
+        cmd_init_buses(CommandInput());
+//        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+//
+//        gpio_put(PIN_RESET, 0);
+//        for (auto ii = 0; ii < 2; ii++)
+//        {
+//            gpio_put(PIN_CLOCK, 0);
+//            sleep_ms(10);
+//            gpio_put(PIN_CLOCK, 1);
+//            sleep_ms(10);
+//        }
+//        gpio_put(PIN_RESET, 1);
 //        for (auto ii = 0; ii < 8; ii++)
 //        {
 //            gpio_put(PIN_CLOCK, 0);
@@ -323,68 +341,26 @@ namespace cmd_io
         return false;
     }
 
-    bool cmd_assert_databus(CommandInput input = CommandInput())
-    {
-        if (input.empty())
-        {
-            return true;
-        }
-        uint8_t data = std::stoi(input[0], nullptr, 16);
-        VERBOSE("Asserting data bus with %02x\r\n", data)
-        assert_databus(data);
-        return false;
-    }
-
-    void assert_databus(uint8_t data)
-    {
-        for (auto ii = 40; ii < 48; ii++)
-        {
-            gpio_init(ii);
-        }
-        set_databus_out(true);
-//        std::cout << "Data " << std::bitset<64>(static_cast<uint64_t>(data) << 40) << std::endl << "Mask " << std::bitset<64>(DATA_MASK) << std::endl;
-        for (auto ii = 0; ii < 8; ii++)
-        {
-            if (data & (1 << ii))
-            {
-                gpio_put(ii + 40, 1);
-            }
-            else
-            {
-                gpio_put(ii + 40, 0);
-            }
-                    
-        }
-//        gpio_put_masked64(DATA_MASK, static_cast<uint64_t>(data) << 40);
-    }
-
-    bool cmd_deassert_databus(CommandInput input = CommandInput())
-    {
-        set_databus_out(false);
-        return false;
-    }
-
-    inline void set_databus_out(bool out)
-    {
-//        std::cout << "set_databus_out " << out << " BEFORE " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
-//        for (auto ii = 40; ii < 48; ii++)
+//    bool cmd_assert_databus(CommandInput input = CommandInput())
+//    {
+//        if (input.empty())
 //        {
-//            gpio_set_dir(ii, GPIO_OUT);
+//            return true;
 //        }
-        if (out)
-            gpio_set_dir_masked64(DATA_MASK, DATA_MASK);
-        else
-          gpio_set_dir_masked64(DATA_MASK, 0);
-//        std::cout << "set_databus_out " << out << " AFTER " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
-    }
+//        uint8_t data = std::stoi(input[0], nullptr, 16);
+//        VERBOSE("Asserting data bus with %02x\r\n", data)
+//        assert_databus(data);
+//        return false;
+//    }
+
 
     void set_address_bus_out(bool out)
     {
 //        printf("set_address_bus_out %u\r\n", out);
 //        std::cout << "set_address_bus_out " << out << " BEFORE " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
+
         if (out)
         {
-            gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
             gpio_set_dir(PIN_RW, GPIO_OUT);
             gpio_put(PIN_RW, RW_READ);
             gpio_set_dir_masked64(ADDR_MASK, ADDR_MASK);
@@ -393,7 +369,6 @@ namespace cmd_io
         {
             gpio_set_dir_masked64(ADDR_MASK, 0);
             gpio_set_dir(PIN_RW, GPIO_IN);
-            gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         }
 //        std::cout << "set_address_bus_out " << out << " AFTER " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
     }
@@ -423,64 +398,70 @@ namespace cmd_io
         return false;
     }
 
-    bool cmd_clock_line_low(CommandInput input = CommandInput())
+    bool cmd_clock_stop(CommandInput input = CommandInput())
     {
-        gpio_put(PIN_CLOCK, 0);
-        return false;
-    }
-    bool cmd_clock_line_high(CommandInput input = CommandInput())
-    {
-        gpio_put(PIN_CLOCK, 1);
+        set_clock_frequency(0.0);
         return false;
     }
 
-    bool cmd_assert_address_bus(CommandInput input = CommandInput())
-    {
-        if (input.empty())
-        {
-            return true;
-        }
-        uint16_t address = std::stoi(input[0], nullptr, 16);
-        assert_address_bus(address);
-        return true;
-    }
+//    bool cmd_clock_line_low(CommandInput input = CommandInput())
+//    {
+//        gpio_put(PIN_CLOCK, 0);
+//        return false;
+//    }
+//    bool cmd_clock_line_high(CommandInput input = CommandInput())
+//    {
+//        gpio_put(PIN_CLOCK, 1);
+//        return false;
+//    }
 
-    void assert_address_bus(uint16_t addr)
-    {
+//    bool cmd_assert_address_bus(CommandInput input = CommandInput())
+//    {
+//        if (input.empty())
+//        {
+//            return true;
+//        }
+//        uint16_t address = std::stoi(input[0], nullptr, 16);
+//        assert_address_bus(address);
+//        return true;
+//    }
+//
+//    void assert_address_bus(uint16_t addr)
+//    {
 //        if (verbose)
 //        {
 //            char buffer[64];
 //            sprintf(buffer, "Assert Address Bus %04x\r\n", addr);
 //            log_queue.push_back(buffer);
 //        }
-        set_address_bus_out(true);
-        gpio_put_masked64(ADDR_MASK, static_cast<uint64_t>(addr));
-    }
+//        set_address_bus_out(true);
+//        gpio_put_masked64(ADDR_MASK, static_cast<uint64_t>(addr));
+//    }
 
-    bool cmd_we_lo(CommandInput input = CommandInput())
-    {
-        gpio_set_dir(PIN_RW, GPIO_OUT);
-        gpio_put(PIN_RW, 0);
-        return false;
-    }
-
-    bool cmd_we_hi(CommandInput input = CommandInput())
-    {
-        gpio_set_dir(PIN_RW, GPIO_OUT);
-        gpio_put(PIN_RW, 1);
-        return false;
-    }
-    bool cmd_bus_active(CommandInput input = CommandInput()) 
-    {
-        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
-        return false;
-    }
-
-    bool cmd_bus_inactive(CommandInput input = CommandInput())
-    {
-        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
-        return false;
-    }
+//    bool cmd_we_lo(CommandInput input = CommandInput())
+//    {
+//        gpio_set_dir(PIN_RW, GPIO_OUT);
+//        gpio_put(PIN_RW, 0);
+//        return false;
+//    }
+//
+//    bool cmd_we_hi(CommandInput input = CommandInput())
+//    {
+//        gpio_set_dir(PIN_RW, GPIO_OUT);
+//        gpio_put(PIN_RW, 1);
+//        return false;
+//    }
+//    bool cmd_bus_active(CommandInput input = CommandInput()) 
+//    {
+//        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+//        return false;
+//    }
+//
+//    bool cmd_bus_inactive(CommandInput input = CommandInput())
+//    {
+//        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+//        return false;
+//    }
 
     bool cmd_dump_memory(CommandInput input = CommandInput())
     {

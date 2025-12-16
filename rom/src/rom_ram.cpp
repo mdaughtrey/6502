@@ -10,7 +10,7 @@
 #include "types.h"
 #include "rom_ram.h"
 #include "pin_defs.h"
-#include "cmd_io_internal.h"
+#include "cmd_io.h"
 #include "ioutils.h"
 // #include "varstacktest.h"
 
@@ -51,6 +51,9 @@ namespace rom_ram
 
     std::string dump_memory(uint16_t addr, uint16_t length);
     void write_to_memory(uint8_t * data, uint16_t length, uint16_t target_address);
+    void assert_address_bus(uint16_t addr);
+    void assert_databus(uint8_t data);
+    void set_databus_out(bool out);
 
     void init(void)
     {
@@ -85,8 +88,16 @@ namespace rom_ram
     std::string dump_memory(uint16_t address, uint16_t length)
     {
         std::stringstream linetext;
+        bool be_low = false;
+        if (!gpioc_hilo_in_get() & cmd_io::BE_MASK)
+        {
+            be_low = true;
+        }
 
-        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+        if (!be_low)
+        {
+            gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+        }
         uint64_t mask = cmd_io::ADDR_MASK | cmd_io::RW_MASK;
         gpio_set_dir_masked64(mask, mask);
         gpio_put(PIN_RW, 1);        // Read
@@ -128,7 +139,10 @@ namespace rom_ram
 //            linetext << std::endl;
         }
         gpio_set_dir_masked64(mask, 0);
-        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+        if (!be_low)
+        {
+            gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+        }
         return linetext.str();
     }
 
@@ -168,25 +182,18 @@ namespace rom_ram
         uint64_t mask = cmd_io::ADDR_MASK | cmd_io::DATA_MASK | cmd_io::RW_MASK;
         gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         gpio_set_dir_masked64(mask, mask);
-//        gpio_set_dir(PIN_RW, GPIO_OUT);
         for (auto ii = 0; ii < length; ii++)
         {
-//            gpio_put(PIN_RW, 0);
-//            sleep_us(1);
-            cmd_io::assert_address_bus(target_address + ii);
-            cmd_io::assert_databus(data[ii]);
-//            cmd_io::pin_status();
-            sleep_us(1);
-//            printf("%04x <- %02x\r\n", target_address + ii, data[ii]);
+            assert_address_bus(target_address + ii);
+            assert_databus(data[ii]);
+            sleep_us(5);
             gpio_put(PIN_RW, 0);
-            sleep_us(1);
+            sleep_us(5);
             gpio_put(PIN_RW, 1);
-            sleep_us(1);
+            sleep_us(5);
         }
-//        sleep_ms(1);
         gpio_set_dir_masked64(mask, 0);
         gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
-//        cmd_io::pin_status();
     }
 
     bool cmd_upload_rom_image(CommandInput input = CommandInput())
@@ -196,4 +203,47 @@ namespace rom_ram
         printf(" Done.\r\n");
         return false;
     }
+
+    void assert_address_bus(uint16_t addr)
+    {
+        cmd_io::set_address_bus_out(true);
+        gpio_put_masked64(cmd_io::ADDR_MASK, static_cast<uint64_t>(addr));
+    }
+
+    void assert_databus(uint8_t data)
+    {
+//        for (auto ii = 40; ii < 48; ii++)
+//        {
+//            gpio_init(ii);
+//        }
+        set_databus_out(true);
+//        std::cout << "Data " << std::bitset<64>(static_cast<uint64_t>(data) << 40) << std::endl << "Mask " << std::bitset<64>(DATA_MASK) << std::endl;
+        for (auto ii = 0; ii < 8; ii++)
+        {
+            if (data & (1 << ii))
+            {
+                gpio_put(ii + 40, 1);
+            }
+            else
+            {
+                gpio_put(ii + 40, 0);
+            }
+                    
+        }
+//        gpio_put_masked64(DATA_MASK, static_cast<uint64_t>(data) << 40);
+    }
+    inline void set_databus_out(bool out)
+    {
+//        std::cout << "set_databus_out " << out << " BEFORE " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
+//        for (auto ii = 40; ii < 48; ii++)
+//        {
+//            gpio_set_dir(ii, GPIO_OUT);
+//        }
+        if (out)
+            gpio_set_dir_masked64(cmd_io::DATA_MASK, cmd_io::DATA_MASK);
+        else
+          gpio_set_dir_masked64(cmd_io::DATA_MASK, 0);
+//        std::cout << "set_databus_out " << out << " AFTER " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
+    }
+
 }
