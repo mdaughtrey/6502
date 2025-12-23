@@ -50,7 +50,7 @@ namespace rom_ram
     };
 
     std::string dump_memory(uint16_t addr, uint16_t length);
-    void write_to_memory(uint8_t * data, uint16_t length, uint16_t target_address);
+    void write_to_memory(uint8_t * data, uint32_t length, uint16_t target_address);
     void assert_address_bus(uint16_t addr);
     void assert_databus(uint8_t data);
     void set_databus_out(bool out);
@@ -177,7 +177,7 @@ namespace rom_ram
         return false;
     }
 
-    void write_to_memory(uint8_t * data, uint16_t length, uint16_t target_address)
+    void write_to_memory(uint8_t * data, uint32_t length, uint16_t target_address)
     {
         uint64_t mask = cmd_io::ADDR_MASK | cmd_io::DATA_MASK | cmd_io::RW_MASK;
         gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
@@ -186,11 +186,11 @@ namespace rom_ram
         {
             assert_address_bus(target_address + ii);
             assert_databus(data[ii]);
-            sleep_us(5);
+            sleep_us(1);
             gpio_put(PIN_RW, 0);
-            sleep_us(5);
+            sleep_us(1);
             gpio_put(PIN_RW, 1);
-            sleep_us(5);
+            sleep_us(1);
         }
         gpio_set_dir_masked64(mask, 0);
         gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
@@ -200,6 +200,20 @@ namespace rom_ram
     {
         printf("Loading %d bytes to %04x...", rom1_bin_len, 0x0000);
         write_to_memory(rom1_bin, rom1_bin_len, 0x0000);
+        printf(" Done.\r\n");
+        return false;
+    }
+
+    bool cmd_upload_test_image(CommandInput input = CommandInput())
+    {
+        uint8_t rom_image[65536];
+        printf("Uploading test image...");
+        for (auto ii = 0; ii < 65536; ii++)
+        {
+            rom_image[ii] = ii % 256;
+        }
+//        while (1)
+        write_to_memory(rom_image, 65536, 0x0000);
         printf(" Done.\r\n");
         return false;
     }

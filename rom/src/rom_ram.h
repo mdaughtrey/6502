@@ -13,4 +13,5 @@ namespace rom_ram
     bool cmd_load_program_to_memory(CommandInput);
     bool cmd_write_memory(CommandInput);
     bool cmd_upload_rom_image(CommandInput);
+    bool cmd_upload_test_image(CommandInput);
 }

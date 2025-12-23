@@ -1,6 +1,6 @@
 .ifndef VIA6522_INC
 .define VIA6522_INC
-IOBASE = $4000
+IOBASE = $5000
 ORBIRB = IOBASE          ; Write = output register B, Read = input register B
 ORAIRA = IOBASE + 1     ; Write = output register A, Read = input register A
 DDRB = IOBASE + 2       ; direction register B

@@ -2,7 +2,7 @@
 #include "pico/stdlib.h"
 
 const uint64_t PIN_BUS_ENABLE = 31;
-const uint64_t PIN_CLOCK = 32;
+const uint64_t PIN_CLOCK = 25;
 const uint64_t PIN_RESET = 33;
 const uint64_t PIN_PHI0 = 34;
 const uint64_t PIN_IRQ = 35;

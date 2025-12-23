@@ -13,7 +13,7 @@ namespace cmd_io
     bool cmd_pin_status_on_clock(CommandInput);
     bool cmd_reset(CommandInput);
 //    bool cmd_assert_databus(CommandInput);
-//    bool cmd_assert_address_bus(CommandInput);
+    bool cmd_assert_address_bus(CommandInput);
 //    bool cmd_deassert_databus(CommandInput);
     bool cmd_io(CommandInput);
     bool cmd_init_buses(CommandInput);
@@ -24,8 +24,8 @@ namespace cmd_io
     bool cmd_clock_stop(CommandInput);
 //    bool cmd_we_lo(CommandInput);
 //    bool cmd_we_hi(CommandInput);
-//    bool cmd_bus_active(CommandInput); 
-//    bool cmd_bus_inactive(CommandInput); 
+    bool cmd_bus_active(CommandInput); 
+    bool cmd_bus_inactive(CommandInput); 
     bool cmd_set_memory_dump(CommandInput);
     bool cmd_dump_memory_on_clock(CommandInput);
     bool cmd_set_breakpoint(CommandInput);

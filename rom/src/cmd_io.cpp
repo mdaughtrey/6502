@@ -119,7 +119,7 @@ namespace cmd_io
 
     void run_clocked_tasks(bool clock_state)
     {
-        VERBOSE("Run_clocked_tasks: %u tasks", clocked_tasks.size())
+//        VERBOSE("Run_clocked_tasks: %u tasks", clocked_tasks.size())
         if (!clocked_tasks.empty())
         {
             log_queue.push_back(clock_state ? "Clock 1" : "Clock 0");
@@ -131,18 +131,21 @@ namespace cmd_io
         }
     }
 
-    void set_clock_frequency_low(uint32_t frequency_hz)
+    void set_clock_frequency_low(float frequency_hz)
     {
-        float period = 1.0/static_cast<float>(frequency_hz)*500.0;
-        VERBOSE("set_clock_frequency_low called with %u, period is %f\r\n", frequency_hz, period)
+        VERBOSE("set_clock_frequency_low\r\n");
+        VERBOSE("frequency %f\r\n", frequency_hz);
+
+        uint64_t period = static_cast<uint64_t>(1.0/frequency_hz*5e5); // *500.0;
+        VERBOSE("set_clock_frequency_low called with %f, period is %llu us\r\n", frequency_hz, period)
         if (gpio_get_function(PIN_CLOCK) != GPIO_FUNC_SIO)
         {
             gpio_init(PIN_CLOCK);
             gpio_set_dir(PIN_CLOCK, GPIO_OUT);
         }
         clock_pin_state = false;
-        add_repeating_timer_ms(static_cast<uint32_t>(period), &lfo_timer_callback, NULL, &lfo_timer);
-        VERBOSE("set_clock_frequency_returns");
+        bool result = add_repeating_timer_us(period, &lfo_timer_callback, NULL, &lfo_timer);
+        VERBOSE("add_repeating_timer_ms returns %d, set_clock_frequency_returns", result);
     }
 
     bool cmd_set_clock_frequency(CommandInput input = CommandInput())
@@ -151,11 +154,11 @@ namespace cmd_io
         {
             return true;
         }
-        uint32_t frequency_hz = std::stof(input[1]);
+        float frequency_hz = std::stof(input[1]);
+        VERBOSE("Requesting clock frequency %f\r\n", frequency_hz);
         set_clock_frequency(frequency_hz);
         return false;
     }
-
 
     void set_clock_frequency(float frequency_hz)
     {
@@ -169,9 +172,11 @@ namespace cmd_io
             gpio_init(PIN_CLOCK);
             return;
         }
-        gpio_set_dir(PIN_CLOCK, GPIO_OUT);
-        if (frequency_hz < 1000)
+//        gpio_set_dir(PIN_CLOCK, GPIO_OUT);
+        VERBOSE("Requested clock frequency %f\r\n", frequency_hz);
+        if (frequency_hz < 1000.0)
         {
+            VERBOSE("Requesting set_clock_frequency_low\r\n");
             set_clock_frequency_low(frequency_hz);
             return;
         }
@@ -185,7 +190,7 @@ namespace cmd_io
         VERBOSE("wrap %u\r\n", wrap);
         // clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, idivider, wrap);
         //
-        clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_USB, idivider, wrap);
+        clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT3_CTRL_AUXSRC_VALUE_CLK_USB, idivider, wrap);
     }
 
     bool cmd_step_clock(CommandInput input = CommandInput())
@@ -415,28 +420,28 @@ namespace cmd_io
 //        return false;
 //    }
 
-//    bool cmd_assert_address_bus(CommandInput input = CommandInput())
-//    {
-//        if (input.empty())
-//        {
-//            return true;
-//        }
-//        uint16_t address = std::stoi(input[0], nullptr, 16);
-//        assert_address_bus(address);
-//        return true;
-//    }
-//
-//    void assert_address_bus(uint16_t addr)
-//    {
-//        if (verbose)
-//        {
-//            char buffer[64];
-//            sprintf(buffer, "Assert Address Bus %04x\r\n", addr);
-//            log_queue.push_back(buffer);
-//        }
-//        set_address_bus_out(true);
-//        gpio_put_masked64(ADDR_MASK, static_cast<uint64_t>(addr));
-//    }
+    bool cmd_assert_address_bus(CommandInput input = CommandInput())
+    {
+        if (input.empty())
+        {
+            return true;
+        }
+        uint16_t address = std::stoi(input[0], nullptr, 16);
+        assert_address_bus(address);
+        return true;
+    }
+
+    void assert_address_bus(uint16_t addr)
+    {
+        if (verbose)
+        {
+            char buffer[64];
+            sprintf(buffer, "Assert Address Bus %04x\r\n", addr);
+            log_queue.push_back(buffer);
+        }
+        set_address_bus_out(true);
+        gpio_put_masked64(ADDR_MASK, static_cast<uint64_t>(addr));
+    }
 
 //    bool cmd_we_lo(CommandInput input = CommandInput())
 //    {
@@ -451,17 +456,17 @@ namespace cmd_io
 //        gpio_put(PIN_RW, 1);
 //        return false;
 //    }
-//    bool cmd_bus_active(CommandInput input = CommandInput()) 
-//    {
-//        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
-//        return false;
-//    }
-//
-//    bool cmd_bus_inactive(CommandInput input = CommandInput())
-//    {
-//        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
-//        return false;
-//    }
+    bool cmd_bus_active(CommandInput input = CommandInput()) 
+    {
+        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+        return false;
+    }
+
+    bool cmd_bus_inactive(CommandInput input = CommandInput())
+    {
+        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+        return false;
+    }
 
     bool cmd_dump_memory(CommandInput input = CommandInput())
     {

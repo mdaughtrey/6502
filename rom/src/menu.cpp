@@ -45,13 +45,13 @@ Command commands_top[] = {
 };
 
 Command commands_io[] = {
-// {
-//     'a', "Assert Address Bus (Hex)",
-//     Validator("[0-9a-fA-F]{4}", "Enter addr XXXX"),
-//     cmd_io::cmd_assert_address_bus 
-// },
-// {'b', "Bus Inactive", Validator(""), cmd_io::cmd_bus_inactive },
-// {'B', "Bus Active", Validator(""), cmd_io::cmd_bus_active },
+{
+     'a', "Assert Address Bus (Hex)",
+     Validator("[0-9a-fA-F]{4}", "Enter addr XXXX"),
+     cmd_io::cmd_assert_address_bus 
+},
+{'b', "Bus Inactive", Validator(""), cmd_io::cmd_bus_inactive },
+{'B', "Bus Active", Validator(""), cmd_io::cmd_bus_active },
 // {'c', "Clock Line Low", Validator(""), cmd_io::cmd_clock_line_low },
 // {'C', "Clock Line High", Validator(""), cmd_io::cmd_clock_line_high },
 {
@@ -118,6 +118,7 @@ Command commands_rom_ram[] = {
     Validator("(\\d+)", "Program number"),
     rom_ram::cmd_load_program_to_memory 
 },
+{'t', "Upload test image", Validator(""), rom_ram::cmd_upload_test_image },
 {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
 {0x01, "", Validator(""), [](CommandInput input)->bool { return false;} }
 };
