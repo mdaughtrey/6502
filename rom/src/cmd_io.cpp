@@ -63,7 +63,7 @@ namespace cmd_io
 
     bool cmd_init_buses(CommandInput input = CommandInput())
     {
-        uint64_t mask = RESET_MASK | CLOCK_MASK | IRQ_MASK | NMI_MASK | PHI0_MASK | BE_MASK | READY_MASK;
+        uint64_t mask = RESET_MASK | CLOCK_MASK | NMI_MASK | PHI0_MASK | BE_MASK | READY_MASK;
         VERBOSE("Pin initialization mask is %s", std::bitset<64>(mask).to_string().c_str());
         for (auto ii = 0; ii < 64; ii++)
         {

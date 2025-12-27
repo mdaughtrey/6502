@@ -1,4 +1,5 @@
-.include "via6522.inc"
+.include "via6522_regs.inc"
+.include "via6522_import.inc"
 .include "lcd.inc"
 .include "chaser.inc"
 
@@ -7,28 +8,27 @@
 .import DATAIO, DATAPORT, SELECTPORT
 .import var_init, var_push, var_pop
 
-.import via6522_init
+; .import via6522_init, via6522_timer_init, via6522_isr_ret
 
 ;.segment "ZEROPAGE"
 ; Key state
 ;KEYS: .byte 0
 
 .segment "CODE"
+.proc isr
+    jsr via6522_isr_ret
+    rti
+.endproc
+
 .proc main
-    sei
+;    sei
     jsr var_init
     jsr via6522_init
-    jsr i2c_init
-    jsr lcd_init
-;    jsr chaser_init
-;    lda #$00        ; I2C Register
-;    jsr var_push
-;    lda #$20        ; I2C Device
-;    jsr var_push
-;    jsr i2c_byte_from_addr
-;    inc I2C_DATA0
+    jsr via6522_timer_init
+;    jsr i2c_init
+;    jsr lcd_init
 :
-    jsr lcd_loop
+;    jsr lcd_loop
 ;    jsr chaser_loop
     jmp :-
 ;    lda #SELECT_LCD
@@ -107,3 +107,5 @@ main_loop:
 ; A = byte to write
 .segment "RESETVEC"
 .word main
+.segment "IRQVEC"
+.word isr

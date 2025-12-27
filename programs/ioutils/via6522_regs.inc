@@ -18,14 +18,30 @@ IFR = IOBASE + 13       ; Interrupt flag register
 IER = IOBASE + 14       ; Interrupt enable register
 ORAIRA0 = ORAIRA        ; ORAIRA no handshake
 
+; Interrupt Enable Register
+IER_SET_CLEAR   = %1000000
+IER_TIMER1      = %01000000     ; Timer1
+IER_TIMER2      = %00100000     ; Timer2
+IER_CB1         = %00010000     ; Peripheral B Control 1 (read handshake)
+IER_CB2         = %00001000     ; Peripheral B Control 2 (write handshake)
+IER_SHIFT_REG   = %00000100     ; Shift register
+IER_CA1         = %00000010     ; Peripheral A Control 1 (read handshake)
+IER_CA2         = %00000001     ; Peripheral A Control 2 (write handshake)
+
+; Auxiliary Control Register
+ACR_T1A         = %10000000     ; Timer1 Control A
+ACR_T1B         = %01000000     ; Timer1 Control B
+ACR_T2          = %00100000     ; Timer2 Control 
+ACR_SRA         = %00010000     ; Shift Register Control A
+ACR_SRB         = %00001000     ; Shift Register Control B
+ACR_SRC         = %00000100     ; Shift Register Control C
+ACR_PB          = %00000010     ; Peripheral B Latch Enable
+ACR_PA          = %00000001     ; Peripheral A Latch Enable
 
 SELECT_NONE = %11111111
 SELECT_KEYS = %11111110
-; SELECT_I2C_SCK = %11111101
-;SELECT_LCD_OUT = %11111011
 SELECT_RESERVED0 = %10000000    ; I2C
 SELECT_RESERVED1 = %01000000    ; I2C
 
-; .export DATAIO, DATAPORT, I2C_ADDR, I2C_DEVICE, SELECTIO, SELECTPORT
 
 .endif ; VIA6522_INC

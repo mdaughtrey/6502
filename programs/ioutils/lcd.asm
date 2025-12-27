@@ -131,7 +131,7 @@ loop:
     cmp #$09        ; done with all the strings?
     bne loop
 done:
-    pla
+
 ;    lcd_deselect
     rts
 .endproc

@@ -1,4 +1,4 @@
-.include "via6522.inc"
+.include "via6522_regs.inc"
 ; .include "i2c.inc"
 
 .import DATAPORT, DATAIO, SELECTPORT, SELECTIO
@@ -79,10 +79,10 @@ I2C_BUFFER: .res 8          ; read/write/buffer
     sta SELECTPORT      ; ...
 .endmacro
 
-I2C_SCL = %10000000    ; 6522 SELECTPORT D7
-NOT_I2C_SCL = %01111111
-I2C_SDA = %01000000    ; 6522 SELECTPORT D6
-NOT_I2C_SDA = %10111111
+I2C_SCL = %01000000    ; 6522 SELECTPORT D7
+NOT_I2C_SCL = %10111111
+I2C_SDA = %00100000    ; 6522 SELECTPORT D6
+NOT_I2C_SDA = %11011111
 .proc   i2c_init
     lda SELECTPORT
     sda_high
