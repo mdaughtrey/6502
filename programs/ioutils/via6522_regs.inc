@@ -1,6 +1,6 @@
 .ifndef VIA6522_INC
 .define VIA6522_INC
-IOBASE = $5000
+IOBASE = $4000
 ORBIRB = IOBASE          ; Write = output register B, Read = input register B
 ORAIRA = IOBASE + 1     ; Write = output register A, Read = input register A
 DDRB = IOBASE + 2       ; direction register B
@@ -19,7 +19,7 @@ IER = IOBASE + 14       ; Interrupt enable register
 ORAIRA0 = ORAIRA        ; ORAIRA no handshake
 
 ; Interrupt Enable Register
-IER_SET_CLEAR   = %1000000
+IER_SET         = %10000000      ; 
 IER_TIMER1      = %01000000     ; Timer1
 IER_TIMER2      = %00100000     ; Timer2
 IER_CB1         = %00010000     ; Peripheral B Control 1 (read handshake)
@@ -35,8 +35,8 @@ ACR_T2          = %00100000     ; Timer2 Control
 ACR_SRA         = %00010000     ; Shift Register Control A
 ACR_SRB         = %00001000     ; Shift Register Control B
 ACR_SRC         = %00000100     ; Shift Register Control C
-ACR_PB          = %00000010     ; Peripheral B Latch Enable
-ACR_PA          = %00000001     ; Peripheral A Latch Enable
+ACR_L1          = %00000010     ; Latch Enable 0
+ACR_L0          = %00000001     ; Latch Enable 1
 
 SELECT_NONE = %11111111
 SELECT_KEYS = %11111110

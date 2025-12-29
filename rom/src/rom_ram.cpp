@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "types.h"
 #include "rom_ram.h"
@@ -49,6 +50,7 @@ namespace rom_ram
         {NULL, {0} }
     };
 
+    std::vector<uint8_t> read_memory(uint16_t address, uint16_t length);
     std::string dump_memory(uint16_t addr, uint16_t length);
     void write_to_memory(uint8_t * data, uint32_t length, uint16_t target_address);
     void assert_address_bus(uint16_t addr);
@@ -85,7 +87,73 @@ namespace rom_ram
         return false;
     }
 
+    std::vector<uint8_t> read_memory(uint16_t address, uint16_t length)
+    {
+        std::vector<uint8_t> data(length, 0);
+        bool be_low = false;
+        if (!gpioc_hilo_in_get() & cmd_io::BE_MASK)
+        {
+            be_low = true;
+        }
+
+        if (!be_low)
+        {
+            gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+        }
+        uint64_t mask = cmd_io::ADDR_MASK | cmd_io::RW_MASK;
+        gpio_set_dir_masked64(mask, mask);
+        gpio_put(PIN_RW, 1);        // Read
+
+        auto iter = data.begin();
+        for (uint16_t addr = address; addr < address + length; addr++)
+        {
+            gpio_put_masked64(cmd_io::ADDR_MASK, addr);
+            sleep_us(10);
+            (*iter) = static_cast<uint8_t>(gpioc_hilo_in_get() >> 40);
+            iter++;
+        }
+        gpio_set_dir_masked64(mask, 0);
+        if (!be_low)
+        {
+            gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+        }
+        return data;
+    }
+
     std::string dump_memory(uint16_t address, uint16_t length)
+    {
+        std::stringstream linetext;
+        std::vector<uint8_t> data = read_memory(address, length);
+
+        uint16_t lines = (length + 15) / 16;
+
+        for (auto line = 0; line < lines; line++)
+        {
+            linetext << std::endl << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << address + line * 16 << ": ";
+            uint8_t dataline[16];
+            for (auto i = 0; i < 16; i++)
+            {
+                dataline[i] = data[(line * 16) + i];
+                linetext << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << static_cast<int>(dataline[i]) << " ";
+            }
+            linetext << "  ";
+            for (auto i = 0; i < 16; i++)
+            {
+                auto c = dataline[i];
+                if (c >= 32 && c <= 126)
+                {
+                    linetext << static_cast<char>(c);
+                }
+                else
+                {
+                    linetext << ".";
+                }
+            }
+        }
+        return linetext.str();
+    }
+
+    std::string dump_memory0(uint16_t address, uint16_t length)
     {
         std::stringstream linetext;
         bool be_low = false;
@@ -258,6 +326,18 @@ namespace rom_ram
         else
           gpio_set_dir_masked64(cmd_io::DATA_MASK, 0);
 //        std::cout << "set_databus_out " << out << " AFTER " << std::bitset<32>(sio_hw->gpio_hi_oe) << std::bitset<32>(sio_hw->gpio_oe) << std::endl;
+    }
+
+    bool cmd_write_to_memory(CommandInput input = CommandInput())
+    {
+        if (input.empty())
+        {
+            return true;
+        }
+        uint16_t addr = std::stoi(input[1], nullptr, 16);
+        uint8_t data = std::stoi(input[2], nullptr, 16);
+        write_to_memory(&data, 1, addr);
+        return false;
     }
 
 }

@@ -22,6 +22,11 @@ I2C_HEADER0:       .byte 0 ; Store device address
 I2C_HEADER1:       .byte 0 ; Store register address
 I2C_BUFFER: .res 8          ; read/write/buffer
 
+I2C_SCL = %01000000    ; 6522 SELECTPORT D6
+NOT_I2C_SCL = %10111111
+I2C_SDA = %00100000    ; 6522 SELECTPORT D5
+NOT_I2C_SDA = %11011111
+
 
 .segment "CODE"
 .macro scl_high
@@ -79,10 +84,6 @@ I2C_BUFFER: .res 8          ; read/write/buffer
     sta SELECTPORT      ; ...
 .endmacro
 
-I2C_SCL = %01000000    ; 6522 SELECTPORT D7
-NOT_I2C_SCL = %10111111
-I2C_SDA = %00100000    ; 6522 SELECTPORT D6
-NOT_I2C_SDA = %11011111
 .proc   i2c_init
     lda SELECTPORT
     sda_high

@@ -43,7 +43,7 @@ Command commands_top[] = {
 {'h', "help", Validator(""),cmd_help },
 {'i', "I/O Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_io; return false; }},
 {'r', "ROM/RAM Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_rom_ram; return false; }},
-{'V', "VIA 6522 Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_via6522; return false; }},
+{'v', "VIA 6522 Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_via6522; return false; }},
 {0x01, "", Validator(""), [](CommandInput input)->bool{ return false; } }
 };
 
@@ -122,13 +122,15 @@ Command commands_rom_ram[] = {
     rom_ram::cmd_load_program_to_memory 
 },
 {'t', "Upload test image", Validator(""), rom_ram::cmd_upload_test_image },
+{'w', "Write to Memory (XXXX/XX)", Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{2})", "Enter addr/value (XXXX/XX)"), rom_ram::cmd_write_to_memory},
 {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
 {0x01, "", Validator(""), [](CommandInput input)->bool { return false;} }
 };
 
 Command commands_via6522[] = {
-    {'d', "Dump registers", Validator(""), via6522::cmd_dump_registers },
     {'b', "Set I/O Base", Validator("([0-9A-Fa-f]{4})", "Enter I/O Base (XXXX)"), via6522::cmd_set_io_base },
+    {'d', "Dump registers", Validator(""), via6522::cmd_dump_registers },
+    {'h', "help", Validator(""), cmd_help },
     {'r', "Set Register", Validator("([0-9a-fA-F]{2})/([0-0a-fA-F][2})", "Register/Value (XX/XX)"), via6522::cmd_set_register },
     {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
     {0x01, "", Validator(""), [](CommandInput input)->bool { return false;} }

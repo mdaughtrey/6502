@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cmd_io.h>
 #include <rom_ram.h>
+#include <via6522.h>
 
 #include <menu.h>
 
@@ -17,6 +18,7 @@ int main()
     stdio_init_all();
     cmd_io::init();
     rom_ram::init();
+    via6522::init();
     while (1)
     {
         int8_t input = getchar_timeout_us(0);
@@ -25,6 +27,7 @@ int main()
             menu::handle(input);
         }
         cmd_io::loop();
+        via6522::loop();
 //        gpio_put(LED_PIN, state);
 //        state = !state;
 //        sleep_ms(101);

@@ -21,14 +21,14 @@
 .endproc
 
 .proc main
-;    sei
+    sei
     jsr var_init
     jsr via6522_init
     jsr via6522_timer_init
-;    jsr i2c_init
-;    jsr lcd_init
+    jsr i2c_init
+    jsr lcd_init
 :
-;    jsr lcd_loop
+    jsr lcd_loop
 ;    jsr chaser_loop
     jmp :-
 ;    lda #SELECT_LCD

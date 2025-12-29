@@ -18,18 +18,24 @@ SELECTIO = DDRB
 ;
 ; Set up a 10ms timer, kicks off an interrupt
 .proc via6522_timer_init
-    lda #(ACR_T1B)      ; PB Continuous Interrupts
+;    lda #(ACR_T1B | ACR_L1 | ACR_L0)      ; PB Continuous Interrupts
+;    lda #0
+;    sta T1CL
+;    sta T1CH
+    lda #ACR_T1B
     sta ACR             ; Store to Aux Control Register
-    lda #$01            ; Set the latches
-    sta T1CL            ; ...
-    lda #$00            ; Set the latches
-    sta T1CH            ; ...
-    lda #IER_TIMER1     ; Enable interrupt
+    lda #(IER_TIMER1 | IER_SET)  ; Enable interrupt
     sta IER             ; ...
+    cli
+    lda #<$00ff            ; Set the latches
+    sta T1CL            ; ...
+    lda #>$00ff
+    sta T1CH            ; ...
     rts
 .endproc
 
 .proc via6522_isr_ret
+;    lda IFR             ; read to clear the interrupt
     lda T1CL            ; read to clear the interrupt
     rts
 .endproc

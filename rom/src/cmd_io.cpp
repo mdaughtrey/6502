@@ -20,15 +20,7 @@
 #include "rom_ram.h"
 #include "rom_ram_internal.h"
 #include "pin_defs.h"
-
-
-#define VERBOSE(...) \
-if (verbose) \
-{ \
-    char buffer[256]; \
-    sprintf(buffer, __VA_ARGS__); \
-    log_queue.push_back(buffer); \
-}
+#include "common_defs.h"
 
 namespace cmd_io
 {
@@ -55,6 +47,8 @@ namespace cmd_io
 
     void init(void)
     {
+        gpio_init(PIN_IRQ);
+//        gpio_set_pulls(PIN_IRQ, true, false);
         gpio_init(PIN_RESET);
         gpio_set_dir(PIN_RESET, GPIO_OUT);
         gpio_put(PIN_RESET, 1);
@@ -63,7 +57,7 @@ namespace cmd_io
 
     bool cmd_init_buses(CommandInput input = CommandInput())
     {
-        uint64_t mask = RESET_MASK | CLOCK_MASK | NMI_MASK | PHI0_MASK | BE_MASK | READY_MASK;
+        uint64_t mask = RESET_MASK | CLOCK_MASK | PHI0_MASK | BE_MASK | READY_MASK;
         VERBOSE("Pin initialization mask is %s", std::bitset<64>(mask).to_string().c_str());
         for (auto ii = 0; ii < 64; ii++)
         {
@@ -80,7 +74,7 @@ namespace cmd_io
         gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         for (auto ii = 0; ii < 64; ii++)
         {
-            if ((1ull << ii) & (ADDR_MASK | DATA_MASK | RW_MASK))
+            if ((1ull << ii) & (ADDR_MASK | DATA_MASK | RW_MASK | IRQ_MASK | NMI_MASK))
             {
                 gpio_init(ii);
                 VERBOSE("Setting %d to IN", ii);
@@ -120,13 +114,13 @@ namespace cmd_io
     void run_clocked_tasks(bool clock_state)
     {
 //        VERBOSE("Run_clocked_tasks: %u tasks", clocked_tasks.size())
-        if (!clocked_tasks.empty())
-        {
-            log_queue.push_back(clock_state ? "Clock 1" : "Clock 0");
-        }
+//        if (!clocked_tasks.empty())
+//        {
+//            log_queue.push_back(clock_state ? "Clock 1" : "Clock 0");
+//        }
         for (auto iter = clocked_tasks.begin(); iter != clocked_tasks.end(); iter++)
         {
-            VERBOSE("Clocked task %s", iter->first.c_str())
+//            VERBOSE("Clocked task %s", iter->first.c_str())
             iter->second();
         }
     }
@@ -523,7 +517,8 @@ namespace cmd_io
             if (addr == *iter)
             {
                 set_clock_frequency(0.0);
-                VERBOSE("Break @%04x", addr)
+                // VERBOSE("Break @%04x", addr)
+                printf("Break @%04x\r\n", addr);
                 break;
             }
         }

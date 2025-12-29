@@ -7,7 +7,7 @@ UF2=build/${PROJECT}.uf2
 ELF=build/${PROJECT}.elf
 MOUNT=/media/rp2040
 
-OBJS=src/rom.cpp src/menu.cpp src/io_menu.cpp
+OBJS=src/rom.cpp src/menu.cpp src/io_menu.cpp src/via6522.cpp
 
 .PHONY : compile
 
