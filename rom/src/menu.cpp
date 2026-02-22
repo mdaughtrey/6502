@@ -9,6 +9,7 @@
 #include "rom_ram.h"
 #include "validator.h"
 #include "via6522.h"
+#include "debugger.h"
 
 namespace menu
 {
@@ -35,12 +36,14 @@ extern Command commands_top[];
 extern Command commands_io[];
 extern Command commands_rom_ram[];
 extern Command commands_via6522[];
+extern Command commands_debugger[];
 Command * command_set = commands_top;
 Command * current_command = NULL;
 // std::string accumulator = "";
 
 Command commands_top[] = {
 {'h', "help", Validator(""),cmd_help },
+{'d', "Debugger Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_debugger; return false; }},
 {'i', "I/O Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_io; return false; }},
 {'r', "ROM/RAM Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_rom_ram; return false; }},
 {'v', "VIA 6522 Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_via6522; return false; }},
@@ -96,6 +99,8 @@ Command commands_io[] = {
     Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})", "Enter addr/length (XXXX/XXXX)"),
     cmd_io::cmd_dump_memory
 },
+{'o', "Toggle Pin 10hz (NN)", Validator("([0-9]{2})", "Pin Number (NN)"), cmd_io::cmd_toggle_pin_10hz },
+{'T', "Test I/O Pins", Validator(""), cmd_io::cmd_test_io_pins },
 {'t', "Clear Clocked Tasks", Validator(""), cmd_io::cmd_clear_clocked_tasks },
 {'v', "Verbose logging", Validator(""), [](CommandInput) -> bool { cmd_io::cmd_verbose_logging(true); return false; }},
 {'V', "Terse logging", Validator(""), [](CommandInput) ->bool { cmd_io::cmd_verbose_logging(false); return false; }},
@@ -108,7 +113,7 @@ Command commands_io[] = {
 Command commands_rom_ram[] = {
 // {'b', "CPU Boot Address (XXXX)", hex_validator, rom_ram::cmd_cpu_boot_address },
 {
-    'd', "Dump Memory (XXXX)",
+    'd', "Dump Memory (XXXX/XXXX)",
     Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})", "Enter addr/length (XXXX/XXXX)"),
     rom_ram::cmd_dump_memory
 },
@@ -134,6 +139,13 @@ Command commands_via6522[] = {
     {'r', "Set Register", Validator("([0-9a-fA-F]{2})/([0-0a-fA-F][2})", "Register/Value (XX/XX)"), via6522::cmd_set_register },
     {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
     {0x01, "", Validator(""), [](CommandInput input)->bool { return false;} }
+};
+
+Command commands_debugger[] = {
+    {'h', "help", Validator(""),cmd_help },
+    {'s', "Show source file", Validator("", ""), debugger::cmd_show_source_file },
+    {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
+    {0x01, "", Validator(""), [](CommandInput input)->bool{ return false; } }
 };
 
 void handle(uint8_t input)

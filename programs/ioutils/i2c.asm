@@ -70,25 +70,30 @@ NOT_I2C_SDA = %11011111
     scl_low
 .endmacro
 
+
 .macro i2c_stop
     lda SELECTPORT      ; stop condition, SCL is Low
-    and #NOT_I2C_SDA         ; SDA Low
-    sta SELECTPORT      ; ...
-    ora #I2C_SCL         ; SCL High
-    sta SELECTPORT      ; ...
-    ora #I2C_SDA        ; SDA High
-    sta SELECTPORT      ; ...
-    and #NOT_I2C_SCL        ; SCK Low
-    sta SELECTPORT      ; ...
-    and #NOT_I2C_SDA         ; SDA Low
-    sta SELECTPORT      ; ...
+    sda_low
+;    and #NOT_I2C_SDA         ; SDA Low
+;    sta SELECTPORT      ; ...
+    scl_high
+;    ora #I2C_SCL         ; SCL High
+;    sta SELECTPORT      ; ...
+    sda_high
+;    ora #I2C_SDA        ; SDA High
+;    sta SELECTPORT      ; ...
+    scl_low
+;    and #NOT_I2C_SCL        ; SCK Low
+;    sta SELECTPORT      ; ...
+    sda_low
+;    and #NOT_I2C_SDA         ; SDA Low
+;    sta SELECTPORT      ; ...
 .endmacro
 
-.proc   i2c_init
+.proc i2c_init
     lda SELECTPORT
     sda_high
     scl_low
-    sta SELECTPORT
     rts
 .endproc
 
@@ -332,7 +337,6 @@ ack_nak:
 ;
 ; ---------------------------------------------
 .proc i2c_byte_to_addr
-    jsr var_pop             ; device
     asl
     sta I2C_HEADER0
     jsr var_pop             ; register
@@ -376,7 +380,6 @@ ack_nak:
     jsr var_pop     ; Register Data
     jsr i2c_write
     i2c_stop
-
     rts
 .endproc
 

@@ -7,7 +7,7 @@ namespace cmd_io
     #define DATA_TO_MASK(dd) (static_cast<uint64_t>(dd) << 40)
     #define MASK_TO_DATA(dd) (static_cast<uint64_t>(dd) >> 40)
 
-//    const uint64_t ADDR_MASK = 0x000000000000ffff;
+    const uint64_t ALL_MASK = 0xffffffffffffffff;
     const uint64_t ADDR_MASK = static_cast<uint64_t>(0xffff) << PIN_ADDR0;
     const uint32_t ADDR_MASK_HI = (ADDR_MASK >> 32u);
     const uint32_t ADDR_MASK_LO = (ADDR_MASK & 0xffffffff);

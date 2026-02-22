@@ -50,7 +50,7 @@ namespace rom_ram
         {NULL, {0} }
     };
 
-    std::vector<uint8_t> read_memory(uint16_t address, uint16_t length);
+    std::vector<uint8_t> read_memory(uint32_t address, uint32_t length);
     std::string dump_memory(uint16_t addr, uint16_t length);
     void write_to_memory(uint8_t * data, uint32_t length, uint16_t target_address);
     void assert_address_bus(uint16_t addr);
@@ -82,12 +82,11 @@ namespace rom_ram
         }
         uint16_t addr = std::stoi(input[1], nullptr, 16);
         uint16_t length = std::stoi(input[2], nullptr, 16);
-//        printf("addr %04x length %04x\r\n", addr, length);
         std::cout << dump_memory(addr, length) << std::endl;
         return false;
     }
 
-    std::vector<uint8_t> read_memory(uint16_t address, uint16_t length)
+    std::vector<uint8_t> read_memory(uint32_t address, uint32_t length)
     {
         std::vector<uint8_t> data(length, 0);
         bool be_low = false;
@@ -100,13 +99,18 @@ namespace rom_ram
         {
             gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         }
+
         uint64_t mask = cmd_io::ADDR_MASK | cmd_io::RW_MASK;
         gpio_set_dir_masked64(mask, mask);
         gpio_put(PIN_RW, 1);        // Read
 
         auto iter = data.begin();
-        for (uint16_t addr = address; addr < address + length; addr++)
+        for (uint32_t addr = address; addr < address + length; addr++)
         {
+            if (addr > 0xffff)
+            {
+                continue;
+            }
             gpio_put_masked64(cmd_io::ADDR_MASK, addr);
             sleep_us(10);
             (*iter) = static_cast<uint8_t>(gpioc_hilo_in_get() >> 40);
@@ -127,22 +131,26 @@ namespace rom_ram
 
         uint16_t lines = (length + 15) / 16;
 
+        std::vector<uint8_t> dataline;
         for (auto line = 0; line < lines; line++)
         {
             linetext << std::endl << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << address + line * 16 << ": ";
-            uint8_t dataline[16];
+            dataline.clear();
             for (auto i = 0; i < 16; i++)
             {
-                dataline[i] = data[(line * 16) + i];
-                linetext << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << static_cast<int>(dataline[i]) << " ";
+                if (((line * 16) + 1) < length)
+                {
+                    uint8_t datum = data[(line * 16) + i];
+                    dataline.push_back(datum);
+                    linetext << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << static_cast<int>(datum) << " ";
+                }
             }
             linetext << "  ";
-            for (auto i = 0; i < 16; i++)
+            for (auto iter = dataline.begin(); iter != dataline.end(); iter++)
             {
-                auto c = dataline[i];
-                if (c >= 32 && c <= 126)
+                if ((*iter) >= 32 && (*iter) <= 126)
                 {
-                    linetext << static_cast<char>(c);
+                    linetext << static_cast<char>(*iter);
                 }
                 else
                 {

@@ -21,16 +21,18 @@ build:
 clean:
 	rm -rf build
 
-mc: 	# mount and copy
+mc: compile  	# mount and copy
 	sudo ./mntrp2040.sh
 	sudo cp ${UF2} ${MOUNT}
 	sudo umount ${MOUNT}
+	sleep 3
+	screen ${PORT} 460800
 	
 
 upload: 
 	${ACLI} upload  -b ${PLATFORM} -p ${PORT} -i  ${UF2}
 
-s:
+s: 
 	screen ${PORT} 460801
 	# screen ${PORT} 115200
 

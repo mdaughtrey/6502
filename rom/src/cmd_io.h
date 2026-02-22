@@ -35,6 +35,8 @@ namespace cmd_io
     bool cmd_dump_memory(CommandInput);
     void cmd_verbose_logging(bool);
     void set_address_bus_out(bool);
+    bool cmd_toggle_pin_10hz(CommandInput);
+    bool cmd_test_io_pins(CommandInput);
 
     extern const uint64_t ADDR_MASK;
     extern const uint64_t DATA_MASK;

@@ -131,7 +131,7 @@ Register registers[] = {
 
     bool cmd_dump_registers(CommandInput input = CommandInput())
     {
-        std::vector<uint8_t> rdata = rom_ram::read_memory(IOBASE, IOBASE+14);
+        std::vector<uint8_t> rdata = rom_ram::read_memory(static_cast<uint32_t>(IOBASE), static_cast<uint32_t>(IOBASE+14));
         for (uint8_t ii = 0; ii < 16; ii++)
         {
             char buffer[128];
@@ -156,9 +156,10 @@ Register registers[] = {
         {
             return true;
         }
-        uint16_t addr = std::stoi(input[1], nullptr, 16);
+        uint8_t regindex = std::stoi(input[1], nullptr, 16);
         uint8_t data = std::stoi(input[2], nullptr, 16);
-        rom_ram::write_to_memory(&data, 1, IOBASE + addr);
+        printf("regindex %02x data %02x\r\n", regindex, data);
+        rom_ram::write_to_memory(&data, 1, IOBASE + regindex);
         return false;
     }
 

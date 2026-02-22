@@ -16,19 +16,26 @@
 
 .segment "CODE"
 .proc isr
+    sei
+;    lda $40
+;    sta ORAIRA
+;    sta ORBIRB
+;    inc $40
     jsr via6522_isr_ret
+    cli
     rti
 .endproc
 
 .proc main
     sei
-    jsr var_init
-    jsr via6522_init
+;    jsr var_init
+;    jsr via6522_init
+;    jsr chaser_init
     jsr via6522_timer_init
-    jsr i2c_init
-    jsr lcd_init
+;    jsr i2c_init
+;    jsr lcd_init
 :
-    jsr lcd_loop
+;    jsr lcd_loop
 ;    jsr chaser_loop
     jmp :-
 ;    lda #SELECT_LCD
