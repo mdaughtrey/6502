@@ -1,12 +1,10 @@
 """Handler for variables requests."""
 from typing import Any, Dict
 from .base_handler import BaseHandler
-from events.event_queue import EventQueue
-
 
 
 class VariablesHandler(BaseHandler):
-    def handle(self, request: Dict[str, Any], event_queue: EventQueue) -> Dict[str, Any]:
+    def handle(self, request: Dict[str, Any]) -> tuple[Dict[str, Any], list]:
         args = request.get("arguments", {})
         var_ref = args.get("variablesReference", 1)
         if self.session:

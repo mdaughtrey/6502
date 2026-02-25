@@ -1,0 +1,49 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "type": "cc65-dbg",
+            "request": "attach",
+            "name": "Attach running",
+            "program": "${workspaceFolder}/rom1.bin",
+            "address": "ws://mini:4711",
+            "trace": true
+        }
+    ]
+}
+
+//         {
+//             "type": "cc65-dbg",
+//             "request": "launch",
+//             "name": "Launch with args",
+//             "program": "${cwd}",
+//             "args": [
+//                 {
+//                     "cpu": "65816",
+//                     "sbin": "${cwd}\\hello_world.bin",
+//                     "src": "${cwd}",
+//                     "list": "${cwd}",
+//                     "input": "0xf004",
+//                     "output": "0xf001"
+//                 }
+//             ],
+//             "stopOnEntry": true,
+//             "cwd": "${cwd}"
+//         }
+//     ]
+//         {
+//   "type": "cc65-dbg",
+//   "request": "launch",
+//   "name": "Debug file",
+//   "program": "hello_world.bin",
+//   "command": "/usr/local/bin/emu",
+//   "args": ["--dap"],
+//   "stopOnEntry": true,
+//   "cwd": "${workspaceFolder}",
+//   "trace": true
+// }
+// }

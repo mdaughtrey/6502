@@ -1,4 +1,4 @@
-.include "via6522_regs.inc"
+re.include "via6522_regs.inc"
 
 
 ;.import I2C_ADDR, I2C_BUFFER, I2C_DEVICE 
