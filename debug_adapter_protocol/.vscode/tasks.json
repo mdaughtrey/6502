@@ -1,0 +1,39 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run adapter via run_adapter.sh",
+      "type": "shell",
+      "command": "${workspaceFolder}/run_adapter.sh",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": [
+          {
+            "regexp": "^\\s*File\\s+\"([^\"]+)\",\\s+line\\s+(\\d+)",
+            "file": 1,
+            "line": 2
+          },
+          {
+            "regexp": "^\\s+.*$"
+          },
+          {
+            "regexp": "^(\\w+Error|\\w+Exception):\\s+(.*)$",
+            "severity": 0,
+            "message": 2
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*listening\\s+on.*",
+          "endsPattern": "^.*(?:Shutting down|Closing connection|KeyboardInterrupt).*"
+        }
+      }
+    }
+  ]
+}
