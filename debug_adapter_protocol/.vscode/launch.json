@@ -1,0 +1,50 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Debug Adapter (WebSocket) via Python",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/dap.py",
+      "args": ["--protocol", "ws", "--host", "0.0.0.0", "--port", "4711"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "justMyCode": false
+    },
+    {
+      "name": "Run Debug Adapter (WebSocket) via Poetry",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/dap.py",
+      "args": ["--protocol", "ws", "--host", "0.0.0.0", "--port", "4711"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+      },
+      "justMyCode": false,
+      "runtimeExecutable": "poetry",
+      "runtimeArgs": ["run", "python"]
+    }
+    ,
+    {
+      "name": "Attach to Adapter (run_adapter.sh)",
+      "type": "python",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+     "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "${workspaceFolder}"
+        }
+      ],
+      "preLaunchTask": "Run adapter via run_adapter.sh"
+    }
+  ]
+}
