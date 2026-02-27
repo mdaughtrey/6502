@@ -24,6 +24,14 @@ class Validator
             accumulator += input;
         }
 
+        void echo(void)
+        {
+            if (!prompt_string.empty())
+            {
+                printf("%c", accumulator.back());
+            }
+        }
+
         const char * expecting()
         {
             return pattern.c_str();

@@ -32,7 +32,12 @@ def send_framed_message(writer: Any, msg: Dict[str, Any], logger_inst: Any = Non
 def main(
     port: int = typer.Option(8080, help="The port to run on"),
     host: str = typer.Option("0.0.0.0", help="The host to run on"),
-    serial: str = typer.Option("/dev/ttyUSB0", help="The serial port to use"),
+    serial_port: str = typer.Option(
+        "/dev/tty.usbmodem212101",
+        "--serial-port",
+        "--serial",
+        help="The serial port to use",
+    ),
     protocol: str = typer.Option("tcp", help="Protocol to use: 'tcp' or 'ws' (websocket)")
 ):
     """Start the Debug Adapter Protocol listener. This runs when the script is executed
@@ -41,18 +46,18 @@ def main(
     # Initialize logging
     setup_logging()
     logger.info(f"Starting Debug Adapter on {host}:{port}")
-    logger.debug(f"Serial port configured: {serial}")
+    logger.debug(f"Serial port configured: {serial_port}")
 
     if protocol.lower() in ("ws", "websocket", "websockets"):
         # Start websocket server (async)
         try:
-            asyncio.run(run_websocket_server(host, port, serial))
+            asyncio.run(run_websocket_server(host, port, serial_port))
         except Exception as e:
             logger.error(f"WebSocket server failed to start: {e}", exc_info=True)
     else:
         # Run the async TCP server for better concurrency
         try:
-            asyncio.run(run_tcp_server(host, port, serial))
+            asyncio.run(run_tcp_server(host, port, serial_port))
         except Exception as e:
             logger.error(f"TCP server failed to start: {e}", exc_info=True)
 
@@ -61,11 +66,16 @@ def main(
 def run(
     port: int = typer.Option(8080, help="The port to run on"),
     host: str = typer.Option("0.0.0.0", help="The host to run on"),
-    serial: str = typer.Option("/dev/ttyUSB0", help="The serial port to use"),
+    serial_port: str = typer.Option(
+        "/dev/tty.usbmodem212101",
+        "--serial-port",
+        "--serial",
+        help="The serial port to use",
+    ),
     protocol: str = typer.Option("tcp", help="Protocol to use: 'tcp' or 'ws' (websocket)")
 ):
     """Alias for the main command for compatibility with `run` subcommand usage."""
-    return main(port=port, host=host, serial=serial, protocol=protocol)
+    return main(port=port, host=host, serial_port=serial_port, protocol=protocol)
 
 
 def listen_for_requests(host: str, port: int, dispatcher: Dispatcher):

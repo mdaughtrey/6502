@@ -1,6 +1,7 @@
 #include "pico/stdlib.h"
 
 #include "pin_defs.h"
+#include "bus_asserts.h"
 
 namespace cmd_io
 {
@@ -53,7 +54,14 @@ namespace cmd_io
     const uint32_t BE_MASK_HI = (BE_MASK >> 32u);
     const uint32_t BE_MASK_LO = (BE_MASK & 0xffffffff);
 
-    void assert_address_bus(uint16_t addr);
-    void assert_databus(uint8_t data);
+    inline void assert_address_bus(uint16_t addr)
+    {
+        bus_asserts::assert_address_bus(addr);
+    }
+
+    inline void assert_databus(uint8_t data)
+    {
+        bus_asserts::assert_databus(data);
+    }
     void pin_status(void);
 }; // namespace cmd_io

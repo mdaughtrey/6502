@@ -4,7 +4,7 @@ include(pico_sdk_import.cmake)
 project(rom)
 pico_sdk_init()
 
-set (SOURCES src/rom.cpp src/menu.cpp src/cmd_io.cpp src/rom_ram.cpp src/via6522.cpp src/debugger.cpp)
+set (SOURCES src/rom.cpp src/menu.cpp src/cmd_io.cpp src/rom_ram.cpp src/via6522.cpp src/debugger.cpp src/bus_asserts.cpp)
 # set (HEADER_FILES src/comm.h)
 add_executable(rom ${SOURCES})
 #pico_add_extra_outputs(rom)

@@ -1,11 +1,13 @@
 PROJECT=rom
 ACLI=~/acli/bin/arduino-cli
 PLATFORM=rp2040:rp2040:rpipico
-PORT=/dev/ttyACM0
+PORT=/dev/tty.usbmodem212101
+
 PICOPROBE_PORT=/dev/ttyACM1
 UF2=build/${PROJECT}.uf2
 ELF=build/${PROJECT}.elf
-MOUNT=/media/rp2040
+#MOUNT=/media/rp2040
+MOUNT=/Volumes/RP2350
 
 OBJS=src/rom.cpp src/menu.cpp src/io_menu.cpp src/via6522.cpp
 
@@ -22,9 +24,9 @@ clean:
 	rm -rf build
 
 mc: compile  	# mount and copy
-	sudo ./mntrp2040.sh
+#	sudo ./mntrp2040.sh
 	sudo cp ${UF2} ${MOUNT}
-	sudo umount ${MOUNT}
+#	sudo umount ${MOUNT}
 	sleep 3
 	screen ${PORT} 460800
 	
@@ -33,7 +35,7 @@ upload:
 	${ACLI} upload  -b ${PLATFORM} -p ${PORT} -i  ${UF2}
 
 s: 
-	screen ${PORT} 460801
+	screen ${PORT} 460800
 	# screen ${PORT} 115200
 
 # openocd -s /usr/share/openocd/ -f scripts/interface/cmsis-dap.cfg -f target/rp2040.cfg -c "adapter speed 100"

@@ -31,7 +31,27 @@ namespace debugger
         log_queue.clear();
     }
 
-    bool cmd_show_source_file(CommandInput value)
+    bool set_breakpoint(CommandInput input)
+    {
+        return false;
+    }
+
+    bool clear_breakpoint(CommandInput input)
+    {
+        return false;
+    }
+
+    bool dump_memory(CommandInput input)
+    {
+        return false;
+    }
+
+    bool run(CommandInput input)
+    {
+        return false;
+    }
+
+    bool step(CommandInput input)
     {
         return false;
     }

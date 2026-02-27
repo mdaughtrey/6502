@@ -1,4 +1,4 @@
-.include "varstack.inc" 
+; .include "varstack.inc" 
 
 .segment "ZEROPAGE"
 VARSTACK_MARKER: .byte $bb
@@ -33,3 +33,4 @@ nodec:
     rts
 .endproc
 
+.export var_init, var_push, var_pop

@@ -10,7 +10,7 @@
             "request": "attach",
             "name": "Attach running",
             "program": "${workspaceFolder}/rom1.bin",
-            "address": "ws://mini:4711",
+            "address": "ws://localhost:4711",
             "trace": true
         }
     ]

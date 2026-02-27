@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 # RPI-RP2 or
 # RP2350

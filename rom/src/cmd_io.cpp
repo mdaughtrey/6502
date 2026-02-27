@@ -21,6 +21,14 @@
 #include "rom_ram_internal.h"
 #include "pin_defs.h"
 #include "common_defs.h"
+#include "bus_asserts.h"
+
+// `rom1_bin` and `rom1_bin_len` are defined in `src/ioutils.h` (binary data).
+// Declare them `extern` here instead of including the header to avoid multiple
+// definition errors when the header (which contains the data) is included
+// by other translation units.
+extern unsigned char rom1_bin[];
+extern unsigned int rom1_bin_len;
 
 namespace cmd_io
 {
@@ -33,8 +41,6 @@ namespace cmd_io
     void set_clock_frequency(float frequency_hz);
 //    void memory_operation(void);
     void run_clocked_tasks(bool clock_state);
-//    void assert_address_bus(uint16_t addr);
-    void assert_databus(uint8_t data);
 //    std::deque<void (*)(void)> task_queue;
     std::list<std::pair<std::string, void (*)(void)> > clocked_tasks;
     std::list<std::string> log_queue;
@@ -473,20 +479,8 @@ namespace cmd_io
             return true;
         }
         uint16_t address = std::stoi(input[0], nullptr, 16);
-        assert_address_bus(address);
+        bus_asserts::assert_address_bus(address);
         return true;
-    }
-
-    void assert_address_bus(uint16_t addr)
-    {
-        if (verbose)
-        {
-            char buffer[64];
-            sprintf(buffer, "Assert Address Bus %04x\r\n", addr);
-            log_queue.push_back(buffer);
-        }
-        set_address_bus_out(true);
-        gpio_put_masked64(ADDR_MASK, static_cast<uint64_t>(addr));
     }
 
 //    bool cmd_we_lo(CommandInput input = CommandInput())
@@ -605,13 +599,7 @@ namespace cmd_io
         {
             return true;
         }
-        uint8_t index = std::stoi(input[1]);
-        if (index < breakpoints.size())
-        {
-            auto iter = breakpoints.begin();
-            std::advance(iter, index);
-            breakpoints.erase(iter);
-        }
+        breakpoints.remove(std::stoi(input[1], nullptr, 16));
         if (breakpoints.empty())
         {
             clocked_tasks_remove("Breakpoint");
@@ -654,12 +642,63 @@ namespace cmd_io
         return false;
     }
 
-    bool cmd_test_io_pins(CommandInput input = CommandInput())
+    bool cmd_run(CommandInput input = CommandInput())
     {
-        pin_toggle_number = 0;
-//        pin_toggle_timer.user_data = static_cast<void *>(&pin_toggle_number);
-        bool result = add_repeating_timer_us(50000, &pin_test_callback, NULL, &pin_toggle_timer);
+        return true;
+    }
+
+    bool cmd_upload_rom_image(CommandInput input = CommandInput())
+    {
+        uint64_t mask = cmd_io::ADDR_MASK | cmd_io::DATA_MASK | cmd_io::RW_MASK;
+        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+        gpio_set_dir_masked64(mask, mask);
+        for (auto ii = 0; ii < rom1_bin_len; ii++)
+        {
+            bus_asserts::assert_address_bus(ii);
+            bus_asserts::assert_databus(rom1_bin[ii]);
+            sleep_us(1);
+            gpio_put(PIN_RW, 0);
+            sleep_us(1);
+            gpio_put(PIN_RW, 1);
+            sleep_us(1);
+        }
+        gpio_set_dir_masked64(mask, 0);
+        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         return false;
     }
+
+//    bool cmd_test_io_pins(CommandInput input = CommandInput())
+//    {
+//        pin_toggle_number = 0;
+////        pin_toggle_timer.user_data = static_cast<void *>(&pin_toggle_number);
+//        bool result = add_repeating_timer_us(50000, &pin_test_callback, NULL, &pin_toggle_timer);
+//        return false;
+//    }
+//
+//    bool noninteractive_set_breakpoint(CommandInput)
+//    {
+//        return false;
+//    }
+//
+//    bool noninteractive_clear_breakpoint(CommandInput)
+//    {
+//        return false;
+//    }
+//
+//    bool noninteractive_dump_memory(CommandInput)
+//    {
+//        return false;
+//    }
+//
+//    bool noninteractive_run(CommandInput)
+//    {
+//        return false;
+//    }
+//
+//    bool noninteractive_step(CommandInput)
+//    {
+//        return false;
+//    }
+
 
 } // namespace cmd_io

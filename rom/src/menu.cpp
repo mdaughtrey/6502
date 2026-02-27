@@ -9,7 +9,7 @@
 #include "rom_ram.h"
 #include "validator.h"
 #include "via6522.h"
-#include "debugger.h"
+// #include "debugger.h"
 
 namespace menu
 {
@@ -83,7 +83,7 @@ Command commands_io[] = {
     cmd_io::cmd_io 
 },
 {'k', "Breakpoint", Validator("([0-9a-fA-F]{4})","XXXX"), cmd_io::cmd_set_breakpoint },
-{'K', "Clear breakpoint", Validator("([0-9]+)","Clear Breakpoint"), cmd_io::cmd_clear_breakpoint },
+{'K', "Clear breakpoint", Validator("([0-9a-fA-F]{4})","XXXX"), cmd_io::cmd_clear_breakpoint },
 {'l', "List Breakpoints", Validator(""), cmd_io::cmd_list_breakpoints },
 {'m', "set memory dump", Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})","XXXX/XXXX"), cmd_io::cmd_set_memory_dump },
 {'M', "memory dump on clock", Validator(""), cmd_io::cmd_dump_memory_on_clock },
@@ -100,7 +100,7 @@ Command commands_io[] = {
     cmd_io::cmd_dump_memory
 },
 {'o', "Toggle Pin 10hz (NN)", Validator("([0-9]{2})", "Pin Number (NN)"), cmd_io::cmd_toggle_pin_10hz },
-{'T', "Test I/O Pins", Validator(""), cmd_io::cmd_test_io_pins },
+//{'T', "Test I/O Pins", Validator(""), cmd_io::cmd_test_io_pins },
 {'t', "Clear Clocked Tasks", Validator(""), cmd_io::cmd_clear_clocked_tasks },
 {'v', "Verbose logging", Validator(""), [](CommandInput) -> bool { cmd_io::cmd_verbose_logging(true); return false; }},
 {'V', "Terse logging", Validator(""), [](CommandInput) ->bool { cmd_io::cmd_verbose_logging(false); return false; }},
@@ -143,7 +143,12 @@ Command commands_via6522[] = {
 
 Command commands_debugger[] = {
     {'h', "help", Validator(""),cmd_help },
-    {'s', "Show source file", Validator("", ""), debugger::cmd_show_source_file },
+    {'b', "set breakpoint (XXXX)", Validator("([0-9a-fA-F]{4})"), cmd_io::cmd_set_breakpoint},
+    {'B', "clear breakpoint (XXXX)", Validator("([0-9a-fA-F]{4})"), cmd_io::cmd_clear_breakpoint},
+    {'d', "dump memory (XXXX/XXXX)", Validator("([0-9a-fA-F]{4})/(0-9a-fA-F]{4})"), cmd_io::cmd_dump_memory},
+    {'r', "run", Validator(""), cmd_io::cmd_run},
+    {'s', "step", Validator(""), cmd_io::cmd_step_clock},
+    {'u', "upload rom", Validator(""), cmd_io::cmd_upload_rom_image},
     {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
     {0x01, "", Validator(""), [](CommandInput input)->bool{ return false; } }
 };
@@ -187,7 +192,7 @@ void handle(uint8_t input)
         else
         {
             current_command->validator.accumulate(input);
-            printf("%c", input);
+            current_command->validator.echo();
         }
         return;
     }

@@ -1,8 +1,9 @@
 .include "via6522_regs.inc"
+.include "varstack.inc"
 ; .include "i2c.inc"
 
 .import DATAPORT, DATAIO, SELECTPORT, SELECTIO
-.import var_push, var_pop
+; .import var_push, var_pop
 
 
 I2C_ADDR_LCD = $20    ; LCD Display I2C address
