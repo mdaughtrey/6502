@@ -18,11 +18,11 @@ class InitializedEvent:
 @dataclass
 class StoppedEvent:
     """Event indicating execution of the debuggee has stopped."""
-    seq: int
+    # seq: int
     reason: str
     threadId: int
-    type: str = "event"
-    event: str = "stopped"
+    # type: str = "event"
+    # event: str = "stopped"
     description: Optional[str] = None
     preserveFocusHint: Optional[bool] = None
     text: Optional[str] = None

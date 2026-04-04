@@ -37,7 +37,7 @@
         "host": "localhost",
         "port": 5678
       },
-      "preLaunchTask": "Run adapter via run_adapter.sh"
+//      "preLaunchTask": "Run adapter via run_adapter.sh"
     }
   ]
 }

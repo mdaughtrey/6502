@@ -10,17 +10,22 @@ from .logging_config import logger
 class BaseHandler(ABC):
     """Abstract base class for all DAP request handlers."""
     
-    def __init__(self, serial_port: str = None, debug_session=None, backend_session=None):
+    def __init__(self, debug_session=None, backend_session=None):
         """Initialize the handler.
-        
+
         Args:
-            serial_port: Optional serial port for the debugger connection.
             debug_session: DebugSession with breakpoints, threads, variables state.
             backend_session: BackendSession with seq_generator and event_queue for this connection.
         """
-        self.serial_port = serial_port
         self.debug_session = debug_session
         self.backend_session = backend_session
+        # Expose the active serial connection (if any) for handlers
+        if backend_session is not None and hasattr(backend_session, 'serial_conn'):
+            self.serial_conn = backend_session.serial_conn
+        elif debug_session is not None and hasattr(debug_session, 'serial_conn'):
+            self.serial_conn = debug_session.serial_conn
+        else:
+            self.serial_conn = None
         # Legacy compatibility
         self.session = debug_session
         self.seq_counter = 0
@@ -89,6 +94,27 @@ class BaseHandler(ABC):
             response["message"] = message
             
         return response
+    
+    def create_event(self, event: str, body: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Create a standard DAP event.
+        
+        Args:
+            event: The name of the event (e.g. 'stopped', 'output').
+            body: Optional event body.
+            
+        Returns:
+            A properly formatted DAP event.
+        """
+        event_msg = {
+            "type": "event",
+            # "seq": self._get_next_seq(),
+            "event": event
+        }
+        
+        if body:
+            event_msg["body"] = body
+            
+        return event_msg
     
     def _get_next_seq(self) -> int:
         """Get the next sequence number."""

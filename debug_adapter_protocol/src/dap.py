@@ -48,16 +48,32 @@ def main(
     logger.info(f"Starting Debug Adapter on {host}:{port}")
     logger.debug(f"Serial port configured: {serial_port}")
 
+    # Best-effort: open the serial port at 460800 baud so the adapter
+    # can communicate with the target device. If pyserial is missing
+    # or the port cannot be opened we log and continue so the server
+    # can still run for TCP/WS clients.
+    serial_conn = None
+    try:
+        import serial as _pyserial
+        try:
+            serial_conn = _pyserial.Serial(serial_port, baudrate=460800, timeout=0.1)
+            logger.info(f"Opened serial port {serial_port} at 460800 baud")
+        except Exception as e:
+            logger.error(f"Failed to open serial port {serial_port}: {e}", exc_info=True)
+            serial_conn = None
+    except Exception:
+        logger.warning("pyserial not installed; serial port not opened. Install with: pip install pyserial")
+
     if protocol.lower() in ("ws", "websocket", "websockets"):
         # Start websocket server (async)
         try:
-            asyncio.run(run_websocket_server(host, port, serial_port))
+            asyncio.run(run_websocket_server(host, port, serial_conn))
         except Exception as e:
             logger.error(f"WebSocket server failed to start: {e}", exc_info=True)
     else:
         # Run the async TCP server for better concurrency
         try:
-            asyncio.run(run_tcp_server(host, port, serial_port))
+            asyncio.run(run_tcp_server(host, port, serial_conn))
         except Exception as e:
             logger.error(f"TCP server failed to start: {e}", exc_info=True)
 
@@ -128,7 +144,7 @@ async def poll_tcp_events(backend_session: BackendSession, writer: asyncio.Strea
         logger.error(f"TCP event polling error for {peer}: {e}", exc_info=True)
 
 
-async def run_tcp_server(host: str, port: int, serial: str):
+async def run_tcp_server(host: str, port: int, serial_conn):
     """Async TCP server that speaks DAP framing (Content-Length).
 
     Uses asyncio streams so the server can handle multiple clients concurrently.
@@ -137,9 +153,9 @@ async def run_tcp_server(host: str, port: int, serial: str):
         peer = writer.get_extra_info('peername')
         logger.info(f"TCP client connected: {peer}")
         
-        # Create per-connection session and dispatcher
-        backend_session = BackendSession()
-        dispatcher = Dispatcher(serial_port=serial, backend_session=backend_session)
+        # Create per-connection session and dispatcher (attach live serial_conn)
+        backend_session = BackendSession(serial_conn=serial_conn)
+        dispatcher = Dispatcher(backend_session=backend_session)
         
         # Start background task for spontaneous event polling
         poll_task = asyncio.create_task(poll_tcp_events(backend_session, writer, peer))
@@ -300,7 +316,7 @@ def handle_client(client: socket.socket, dispatcher: Dispatcher):
                 # Send any events
                 for event in events:
                     if isinstance(event, dict):
-                        event['seq'] = seq_gen.next()
+                        # event['seq'] = backend_session.seq_generator.next(
                         payload = json.dumps(event).encode('utf-8')
                         header_bytes = f"Content-Length: {len(payload)}\r\n\r\n".encode('ascii')
                         try:
@@ -383,7 +399,7 @@ async def poll_websocket_events(backend_session: BackendSession, websocket, clie
         logger.error(f"WebSocket event polling error for {client}: {e}", exc_info=True)
 
 
-async def run_websocket_server(host: str, port: int, serial: str):
+async def run_websocket_server(host: str, port: int, serial_conn):
     """Run a WebSocket server that accepts JSON DAP messages.
 
     Tries to import the `websockets` package; if not available logs an error
@@ -403,17 +419,15 @@ async def run_websocket_server(host: str, port: int, serial: str):
             client = None
         logger.info(f"WebSocket client connected: {client}")
         
-        # Create per-connection session and dispatcher
-        backend_session = BackendSession()
-        dispatcher = Dispatcher(serial_port=serial, backend_session=backend_session)
+        # Create per-connection session and dispatcher (attach live serial_conn)
+        backend_session = BackendSession(serial_conn=serial_conn)
+        dispatcher = Dispatcher(backend_session=backend_session)
         
         # Start background task for spontaneous event polling
         poll_task = asyncio.create_task(poll_websocket_events(backend_session, websocket, client))
         
         try:
-            logger.debug("top of cycle")
             async for message in websocket:
-                logger.debug("message received from ws client")
                 # websockets may yield bytes or str depending on client; normalize
                 if isinstance(message, bytes):
                     try:
@@ -429,16 +443,15 @@ async def run_websocket_server(host: str, port: int, serial: str):
                     logger.error('Invalid JSON received over websocket')
                     continue
 
-                logger.debug(f"Received ws request: {request}")
                 response, events = dispatcher.dispatch(request)
                 if response:
                     try:
                         # Assign sequence number from backend session
-                        response['seq'] = backend_session.seq_generator.next()
+                        # response['seq'] = backend_session.seq_generator.next()
                         body = json.dumps(response)
                         response_msg = f"Content-Length: {len(body)}\r\n\r\n{body}"
                         await websocket.send(response_msg)
-                        logger.debug(f"Sent ws response")
+                        logger.debug(f"Sent ws response {response_msg}")
                     except Exception:
                         logger.exception('Failed to send ws response')
                 
@@ -450,7 +463,7 @@ async def run_websocket_server(host: str, port: int, serial: str):
                             body = json.dumps(event)
                             event_msg = f"Content-Length: {len(body)}\r\n\r\n{body}"
                             await websocket.send(event_msg)
-                            logger.debug(f"Sent ws event: {event.get('event', 'unknown')}")
+                            logger.debug(f"Sent ws event: {event_msg}")
                         except Exception:
                             logger.exception('Failed to send ws event')
 

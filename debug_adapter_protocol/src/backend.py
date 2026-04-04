@@ -8,8 +8,13 @@ from typing import Dict, List, Any
 
 
 class DebugSession:
-    def __init__(self, serial_port: str = None):
-        self.serial_port = serial_port
+    def __init__(self, serial_conn=None):
+        """In-memory debug session state.
+
+        Args:
+            serial_conn: Optional open serial connection (pyserial Serial instance).
+        """
+        self.serial_conn = serial_conn
         self._next_bp_id = 1
         self.breakpoints: Dict[str, List[Dict[str, Any]]] = {}
         self.threads: Dict[int, Dict[str, Any]] = {1: {"id": 1, "name": "MainThread"}}

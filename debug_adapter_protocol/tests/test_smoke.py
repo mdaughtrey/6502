@@ -3,7 +3,7 @@ from src.handlers.dispatcher import Dispatcher
 
 
 def test_initialize_response():
-    dispatcher = Dispatcher(serial_port=None)
+    dispatcher = Dispatcher(backend_session=None)
     request = {
         "seq": 1,
         "type": "request",

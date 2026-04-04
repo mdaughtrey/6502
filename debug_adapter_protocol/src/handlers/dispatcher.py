@@ -55,65 +55,68 @@ from .start_debugging import StartDebuggingHandler
 
 class Dispatcher:
     """Routes DAP requests to appropriate handlers."""
-    
-    def __init__(self, serial_port: str = None, backend_session=None):
+
+    def __init__(self, backend_session=None):
         """Initialize the dispatcher.
-        
+
         Args:
-            serial_port: Optional serial port for the debugger connection.
             backend_session: Per-connection BackendSession (seq_generator, event_queue).
                              If None, handlers will use default state management.
         """
-        self.serial_port = serial_port
         self.backend_session = backend_session
-        # Create a shared debug session for handlers (breakpoints, threads, variables)
-        self.debug_session = DebugSession(serial_port=serial_port)
+        # Reuse or create a shared debug session for handlers (breakpoints, threads, variables)
+        serial_conn = None
+        if backend_session is not None and hasattr(backend_session, 'serial_conn'):
+            serial_conn = backend_session.serial_conn
+        self.debug_session = DebugSession(serial_conn=serial_conn)
+        # Handlers receive debug_session and backend_session by keyword to avoid
+        # positional coupling with legacy serial_port argument.
         self.handlers = {
-            'cancel': CancelHandler(serial_port, self.debug_session, self.backend_session),
-            'initialize': InitializeHandler(serial_port, self.debug_session, self.backend_session),
-            'configurationDone': ConfigurationDoneHandler(serial_port, self.debug_session, self.backend_session),
-            'launch': LaunchHandler(serial_port, self.debug_session, self.backend_session),
-            'attach': AttachHandler(serial_port, self.debug_session, self.backend_session),
-            'restart': RestartHandler(serial_port, self.debug_session, self.backend_session),
-            'disconnect': DisconnectHandler(serial_port, self.debug_session, self.backend_session),
-            'terminate': TerminateHandler(serial_port, self.debug_session, self.backend_session),
-            'breakpointLocations': BreakpointLocationsHandler(serial_port, self.debug_session, self.backend_session),
-            'setBreakpoints': SetBreakpointsHandler(serial_port, self.debug_session, self.backend_session),
-            'setFunctionBreakpoints': SetFunctionBreakpointsHandler(serial_port, self.debug_session, self.backend_session),
-            'setExceptionBreakpoints': SetExceptionBreakpointsHandler(serial_port, self.debug_session, self.backend_session),
-            'dataBreakpointInfo': DataBreakpointInfoHandler(serial_port, self.debug_session, self.backend_session),
-            'setDataBreakpoints': SetDataBreakpointsHandler(serial_port, self.debug_session, self.backend_session),
-            'setInstructionBreakpoints': SetInstructionBreakpointsHandler(serial_port, self.debug_session, self.backend_session),
-            'continue': ContinueHandler(serial_port, self.debug_session, self.backend_session),
-            'next': NextHandler(serial_port, self.debug_session, self.backend_session),
-            'stepIn': StepInHandler(serial_port, self.debug_session, self.backend_session),
-            'stepOut': StepOutHandler(serial_port, self.debug_session, self.backend_session),
-            'stepBack': StepBackHandler(serial_port, self.debug_session, self.backend_session),
-            'reverseContinue': ReverseContinueHandler(serial_port, self.debug_session, self.backend_session),
-            'restartFrame': RestartFrameHandler(serial_port, self.debug_session, self.backend_session),
-            'goto': GotoHandler(serial_port, self.debug_session, self.backend_session),
-            'pause': PauseHandler(serial_port, self.debug_session, self.backend_session),
-            'stackTrace': StackTraceHandler(serial_port, self.debug_session, self.backend_session),
-            'scopes': ScopesHandler(serial_port, self.debug_session, self.backend_session),
-            'variables': VariablesHandler(serial_port, self.debug_session, self.backend_session),
-            'setVariable': SetVariableHandler(serial_port, self.debug_session, self.backend_session),
-            'source': SourceHandler(serial_port, self.debug_session, self.backend_session),
-            'threads': ThreadsHandler(serial_port, self.debug_session, self.backend_session),
-            'terminateThreads': TerminateThreadsHandler(serial_port, self.debug_session, self.backend_session),
-            'modules': ModulesHandler(serial_port, self.debug_session, self.backend_session),
-            'loadedSources': LoadedSourcesHandler(serial_port, self.debug_session, self.backend_session),
-            'evaluate': EvaluateHandler(serial_port, self.debug_session, self.backend_session),
-            'setExpression': SetExpressionHandler(serial_port, self.debug_session, self.backend_session),
-            'stepInTargets': StepInTargetsHandler(serial_port, self.debug_session, self.backend_session),
-            'gotoTargets': GotoTargetsHandler(serial_port, self.debug_session, self.backend_session),
-            'completions': CompletionsHandler(serial_port, self.debug_session, self.backend_session),
-            'exceptionInfo': ExceptionInfoHandler(serial_port, self.debug_session, self.backend_session),
-            'readMemory': ReadMemoryHandler(serial_port, self.debug_session, self.backend_session),
-            'writeMemory': WriteMemoryHandler(serial_port, self.debug_session, self.backend_session),
-            'disassemble': DisassembleHandler(serial_port, self.debug_session, self.backend_session),
-            'locations': LocationsHandler(serial_port, self.debug_session, self.backend_session),
-            'runInTerminal': RunInTerminalHandler(serial_port, self.debug_session, self.backend_session),
-            'startDebugging': StartDebuggingHandler(serial_port, self.debug_session, self.backend_session),
+            'cancel': CancelHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'initialize': InitializeHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'configurationDone': ConfigurationDoneHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'launch': LaunchHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'attach': AttachHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'restart': RestartHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'disconnect': DisconnectHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'terminate': TerminateHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'breakpointLocations': BreakpointLocationsHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'setBreakpoints': SetBreakpointsHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'setFunctionBreakpoints': SetFunctionBreakpointsHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'setExceptionBreakpoints': SetExceptionBreakpointsHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'dataBreakpointInfo': DataBreakpointInfoHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'setDataBreakpoints': SetDataBreakpointsHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'setInstructionBreakpoints': SetInstructionBreakpointsHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'continue': ContinueHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'next': NextHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'stepIn': StepInHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'stepOut': StepOutHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'stepBack': StepBackHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'reverseContinue': ReverseContinueHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'restartFrame': RestartFrameHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'goto': GotoHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'pause': PauseHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'stackTrace': StackTraceHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'scopes': ScopesHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'variables': VariablesHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'setVariable': SetVariableHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'source': SourceHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'threads': ThreadsHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'terminateThreads': TerminateThreadsHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'modules': ModulesHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'loadedSources': LoadedSourcesHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'evaluate': EvaluateHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'setExpression': SetExpressionHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'stepInTargets': StepInTargetsHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'gotoTargets': GotoTargetsHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'completions': CompletionsHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'exceptionInfo': ExceptionInfoHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'readMemory': ReadMemoryHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'writeMemory': WriteMemoryHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'disassemble': DisassembleHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'locations': LocationsHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'runInTerminal': RunInTerminalHandler(debug_session=self.debug_session, backend_session=self.backend_session),
+            'startDebugging': StartDebuggingHandler(debug_session=self.debug_session, backend_session=self.backend_session),
         }
     
     def dispatch(self, request: Dict[str, Any]) -> tuple[Dict[str, Any], list]:
