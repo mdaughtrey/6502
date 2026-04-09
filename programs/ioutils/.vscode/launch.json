@@ -11,7 +11,7 @@
             "name": "Attach running",
             "program": "${workspaceFolder}/rom1.bin",
             "address": "ws://localhost:4711",
-            "trace": true
+            "trace": True
         }
     ]
 }

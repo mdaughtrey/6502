@@ -7,7 +7,6 @@ class SetBreakpointsHandler(BaseHandler):
     def handle(self, request: Dict[str, Any]) -> tuple[Dict[str, Any], list]:
         args = request.get("arguments", {})
         self.backend_session.target_write(b'c') # Clear all breakpoints
-        # TODO convert line to hex
 
         # [self.backend_session.target_write(b'b' + format(int(line), "x").encode() + b'\n') for line in args.get("lines", [])]
         # source = args.get("source", {})

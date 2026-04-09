@@ -11,4 +11,4 @@ class VariablesHandler(BaseHandler):
             vars_list = self.session.get_variables(var_ref)
         else:
             vars_list = []
-        return self.create_response(request, body={"variables": vars_list})
+        return self.create_response(request, body={"variables": vars_list}), []

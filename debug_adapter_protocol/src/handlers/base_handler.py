@@ -10,24 +10,20 @@ from .logging_config import logger
 class BaseHandler(ABC):
     """Abstract base class for all DAP request handlers."""
     
-    def __init__(self, debug_session=None, backend_session=None):
+    def __init__(self, backend_session=None):
         """Initialize the handler.
 
         Args:
-            debug_session: DebugSession with breakpoints, threads, variables state.
             backend_session: BackendSession with seq_generator and event_queue for this connection.
         """
-        self.debug_session = debug_session
         self.backend_session = backend_session
         # Expose the active serial connection (if any) for handlers
         if backend_session is not None and hasattr(backend_session, 'serial_conn'):
             self.serial_conn = backend_session.serial_conn
-        elif debug_session is not None and hasattr(debug_session, 'serial_conn'):
-            self.serial_conn = debug_session.serial_conn
         else:
             self.serial_conn = None
         # Legacy compatibility
-        self.session = debug_session
+        self.session = backend_session
         self.seq_counter = 0
         self.logger = logger
     

@@ -37,17 +37,18 @@ class InitializeHandler(BaseHandler):
             "supportsDelayedStackTraceLoading": False,
             "supportsLoadedSourcesRequest": False,
             "supportsLogPoints": False,
-            "supportsTerminateThreadsRequest": True,
+            "supportsTerminateThreadsRequest": False,
             "supportsSetExpression": False,
             "supportsTerminateRequest": True,
             "supportsDataBreakpoints": False,
             "supportsReadMemoryRequest": True,
             "supportsWriteMemoryRequest": True,
-            "supportsDisassembleRequest": True,
+            "supportsDisassembleRequest": False,
             "supportsCancelRequest": False,
             "supportsBreakpointLocationsRequest": True,
         }
 
+        self.backend_session.target_write(b'xxdicu')  # Send initial command to target to indicate we're ready (optional, depends on target protocol)
         # After sending initialize response, send initialized event to signal ready for configuration
         initialized_event = InitializedEvent(seq=0).__dict__  # seq will be assigned by adapter
         

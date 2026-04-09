@@ -234,6 +234,10 @@ async def run_tcp_server(host: str, port: int, serial_conn):
         except Exception as e:
             logger.error(f"TCP handler error for {peer}: {e}", exc_info=True)
         finally:
+            try:
+                backend_session.close()
+            except Exception:
+                logger.exception(f"Failed to close backend session for {peer}")
             # Cancel the background polling task
             poll_task.cancel()
             try:
@@ -470,6 +474,10 @@ async def run_websocket_server(host: str, port: int, serial_conn):
         except Exception as e:
             logger.exception(f"WebSocket handler error for {client}: {e}")
         finally:
+            try:
+                backend_session.close()
+            except Exception:
+                logger.exception(f"Failed to close backend session for {client}")
             # Cancel the background polling task
             poll_task.cancel()
             try:
