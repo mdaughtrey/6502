@@ -48,7 +48,10 @@ class Validator
         }
         void clear()
         {
-            accumulator.clear();
+            if (prompt_string.empty())
+            {
+                accumulator.clear();
+            }
         }
         
         void deletelast()

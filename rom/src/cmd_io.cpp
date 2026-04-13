@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <bitset>
 #include <cstdio>
 #include <functional>
@@ -54,6 +55,7 @@ namespace cmd_io
     uint16_t memdump_length = 0;
     uint8_t pin_toggle_number;
     float frequency_hz = 0.0;
+    bool useJSONIO = false;
 
     void init(void)
     {
@@ -256,7 +258,19 @@ namespace cmd_io
     }
     bool cmd_pin_status(CommandInput input = CommandInput())
     {
-        pin_status();
+        if (useJSONIO)
+        {
+//            char buffer[64];
+            uint64_t pins = gpioc_hilo_in_get();
+            std::cout << std::hex << std::setw(64) << std::setfill('0') << pins << std::endl;
+            std::cout << "{\"pins\": \"" << std::hex << std::setw(64) << std::setfill('0') << pins << "\"}" << std::endl;
+            //printf("{\"pins\": \"%08x%08x\"}\r\n", pins >> 32, pins & 0xffffffff);
+            //log_queue.push_back(buffer);
+        }
+        else
+        {
+            pin_status();
+        }
         return false;
     }
 
@@ -563,8 +577,14 @@ namespace cmd_io
             if (addr == *iter)
             {
                 set_clock_frequency(0.0);
-                // VERBOSE("Break @%04x", addr)
-                printf("Break @%04x\r\n", addr);
+                if (useJSONIO)
+                {
+                    printf("{\"event\": \"break\", \"address\": \"%04x\"}\r\n", addr);
+                }
+                else
+                {
+                    VERBOSE("Break @%04x", addr)
+                }
                 break;
             }
         }
@@ -576,6 +596,10 @@ namespace cmd_io
         {
             return true;
         }
+//        for (auto iter = input.begin(); iter != input.end(); iter++)
+//        {
+//            printf("cmd_set_breakpoint parameter %s\r\n", iter->c_str());
+//        }
         breakpoints.push_back(std::stoi(input[1], nullptr, 16));
         bool found = false;
         for (auto iter = clocked_tasks.begin(); iter != clocked_tasks.end(); iter++)
@@ -599,11 +623,17 @@ namespace cmd_io
         {
             return true;
         }
-        breakpoints.remove(std::stoi(input[1], nullptr, 16));
+        breakpoints.erase(std::remove(breakpoints.begin(), breakpoints.end(), std::stoi(input[1], nullptr, 16)));
         if (breakpoints.empty())
         {
             clocked_tasks_remove("Breakpoint");
         }
+        return false;
+    }
+
+    bool cmd_clear_all_breakpoints(CommandInput input = CommandInput())
+    {
+        breakpoints.clear();
         return false;
     }
 
@@ -644,7 +674,8 @@ namespace cmd_io
 
     bool cmd_run(CommandInput input = CommandInput())
     {
-        return true;
+        set_clock_frequency(3.0);
+        return false;
     }
 
     bool cmd_upload_rom_image(CommandInput input = CommandInput())
@@ -665,6 +696,21 @@ namespace cmd_io
         gpio_set_dir_masked64(mask, 0);
         gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         return false;
+    }
+
+    bool cmd_initialize_debug_session(CommandInput input = CommandInput())
+    {
+        useJSONIO = true;
+        set_clock_frequency(0.0);
+        breakpoints.clear();
+        init();
+        return false;
+    }
+
+    bool cmd_use_json(bool use)
+    {
+        useJSONIO = use;
+        return false;        
     }
 
 //    bool cmd_test_io_pins(CommandInput input = CommandInput())

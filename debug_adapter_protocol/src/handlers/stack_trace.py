@@ -8,8 +8,9 @@ class StackTraceHandler(BaseHandler):
     def handle(self, request: Dict[str, Any]) -> tuple[Dict[str, Any], list]:
         args = request.get("arguments", {})
         thread_id = args.get("threadId", 1)
+        frames = self.session.get_stacktrace(thread_id)
         # if self.session:
         #     frames = self.session.get_stacktrace(thread_id)
         # else:
-        frames = [{"id": 1, "name": "main", "line": 0xc200, "column": 0 }]
+        # frames = [{"id": 1, "name": "main", "line": 0xc200, "column": 0 }]
         return self.create_response(request, body={"stackFrames": frames}), []

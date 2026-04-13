@@ -30,6 +30,7 @@ namespace cmd_io
     bool cmd_dump_memory_on_clock(CommandInput);
     bool cmd_set_breakpoint(CommandInput);
     bool cmd_clear_breakpoint(CommandInput);
+    bool cmd_clear_all_breakpoints(CommandInput);
     bool cmd_list_breakpoints(CommandInput);
     bool cmd_clear_clocked_tasks(CommandInput);
     bool cmd_dump_memory(CommandInput);
@@ -39,6 +40,8 @@ namespace cmd_io
 //    bool cmd_test_io_pins(CommandInput);
     bool cmd_run(CommandInput);
     bool cmd_upload_rom_image(CommandInput);
+    bool cmd_initialize_debug_session(CommandInput);
+    bool cmd_use_json(bool);
 
 //    bool noninteractive_set_breakpoint(CommandInput);
 //    bool noninteractive_clear_breakpoint(CommandInput);

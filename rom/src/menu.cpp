@@ -82,6 +82,8 @@ Command commands_io[] = {
     Validator("([io])(\\d\\d)([01])", "[io]Pin[01] (i|o)NN(1|0)"),
     cmd_io::cmd_io 
 },
+{'j', "JSON Output", Validator(""), [](CommandInput) -> bool { return cmd_io::cmd_use_json(true); } },
+{'J', "Text Output", Validator(""), [](CommandInput) -> bool { return cmd_io::cmd_use_json(false); } },
 {'k', "Breakpoint", Validator("([0-9a-fA-F]{4})","XXXX"), cmd_io::cmd_set_breakpoint },
 {'K', "Clear breakpoint", Validator("([0-9a-fA-F]{4})","XXXX"), cmd_io::cmd_clear_breakpoint },
 {'l', "List Breakpoints", Validator(""), cmd_io::cmd_list_breakpoints },
@@ -142,11 +144,14 @@ Command commands_via6522[] = {
 };
 
 Command commands_debugger[] = {
-    {'h', "help", Validator(""),cmd_help },
     {'b', "set breakpoint (XXXX)", Validator("([0-9a-fA-F]{4})"), cmd_io::cmd_set_breakpoint},
     {'B', "clear breakpoint (XXXX)", Validator("([0-9a-fA-F]{4})"), cmd_io::cmd_clear_breakpoint},
+    {'c', "clear all breakpoints", Validator(""), cmd_io::cmd_clear_all_breakpoints},
     {'d', "dump memory (XXXX/XXXX)", Validator("([0-9a-fA-F]{4})/(0-9a-fA-F]{4})"), cmd_io::cmd_dump_memory},
+    {'h', "help", Validator(""),cmd_help },
+    {'i', "initialize debug session", Validator(""), cmd_io::cmd_initialize_debug_session},
     {'r', "run", Validator(""), cmd_io::cmd_run},
+    {'p', "pin status", Validator(""), cmd_io::cmd_pin_status},
     {'s', "step", Validator(""), cmd_io::cmd_step_clock},
     {'u', "upload rom", Validator(""), cmd_io::cmd_upload_rom_image},
     {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
@@ -156,6 +161,7 @@ Command commands_debugger[] = {
 void handle(uint8_t input)
 {
     const char blank_line[] = "\r                                            \r%s> %s";
+//    printf("Handle state %d input %c\r\n", state, input);
     if (INTERACTIVE_INPUT == state)
     {
         if (input == 0x0d)
@@ -170,7 +176,7 @@ void handle(uint8_t input)
                 printf("\r\n");
                 current_command->fun(matches);
             }
-//            current_command->validator.clear();
+            current_command->validator.clear();
             state = COMMAND;
         }
         else if (input == 24)
@@ -198,9 +204,11 @@ void handle(uint8_t input)
     }
     for (Command * iter = command_set; iter->key != 0x01; iter++)
     {
+//        printf("Comparing %c to %c\r\n", iter->key, input);
         if (iter->key == input)
         {
             current_command = iter;
+//            printf("Found %s\r\n", iter->help);
 
             if (iter->fun(CommandInput()))
             {
@@ -210,6 +218,7 @@ void handle(uint8_t input)
                     printf("%s: %s", current_command->validator.prompt().c_str(), current_command->validator.accumulated().c_str());
 //                    std::cout << "> " << current_command->validator.prompt() << ": " << std::ends;
                 }
+//                printf("Found %s, to interactive input\r\n", iter->help);
                 state = INTERACTIVE_INPUT;
             }
             else
