@@ -56,10 +56,8 @@ Command commands_io[] = {
      Validator("[0-9a-fA-F]{4}", "Enter addr XXXX"),
      cmd_io::cmd_assert_address_bus 
 },
-{'b', "Bus Inactive", Validator(""), cmd_io::cmd_bus_inactive },
-{'B', "Bus Active", Validator(""), cmd_io::cmd_bus_active },
-// {'c', "Clock Line Low", Validator(""), cmd_io::cmd_clock_line_low },
-// {'C', "Clock Line High", Validator(""), cmd_io::cmd_clock_line_high },
+{'b', "Breakpoint", Validator("([0-9a-fA-F]{4})","XXXX"), cmd_io::cmd_set_breakpoint },
+{'B', "Clear breakpoint", Validator("([0-9a-fA-F]{4})","XXXX"), cmd_io::cmd_clear_breakpoint },
 {
     'c', "Set Clock Frequency",
     Validator("(\\d+)", "Hz"),
@@ -70,22 +68,17 @@ Command commands_io[] = {
     Validator(""),
     cmd_io::cmd_clock_stop
 },
-// {
-//     'd', "Assert Databus (Hex)",
-//     Validator("[0-9a-fA-F]{2}", "Enter hex value"),
-//     cmd_io::cmd_assert_databus 
-// },
-// {'D', "Deassert Databus", Validator(""), cmd_io::cmd_deassert_databus },
+{'e', "Bus Enable", Validator(""), cmd_io::cmd_bus_active },
+{'E', "Bus Disable", Validator(""), cmd_io::cmd_bus_inactive },
 {'h', "help", Validator(""), cmd_help },
 {
-    'i', "I/O Value",
+    'I', "I/O Value",
     Validator("([io])(\\d\\d)([01])", "[io]Pin[01] (i|o)NN(1|0)"),
     cmd_io::cmd_io 
 },
+{'i', "Step Instruction", Validator(""), cmd_io::cmd_step_instruction },
 {'j', "JSON Output", Validator(""), [](CommandInput) -> bool { return cmd_io::cmd_use_json(true); } },
 {'J', "Text Output", Validator(""), [](CommandInput) -> bool { return cmd_io::cmd_use_json(false); } },
-{'k', "Breakpoint", Validator("([0-9a-fA-F]{4})","XXXX"), cmd_io::cmd_set_breakpoint },
-{'K', "Clear breakpoint", Validator("([0-9a-fA-F]{4})","XXXX"), cmd_io::cmd_clear_breakpoint },
 {'l', "List Breakpoints", Validator(""), cmd_io::cmd_list_breakpoints },
 {'m', "set memory dump", Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})","XXXX/XXXX"), cmd_io::cmd_set_memory_dump },
 {'M', "memory dump on clock", Validator(""), cmd_io::cmd_dump_memory_on_clock },

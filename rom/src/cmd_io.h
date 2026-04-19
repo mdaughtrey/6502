@@ -8,6 +8,7 @@ namespace cmd_io
     void init(void);
     void loop(void);
     bool cmd_set_clock_frequency(CommandInput);
+    bool cmd_step_instruction(CommandInput);
     bool cmd_step_clock(CommandInput);
     bool cmd_pin_status(CommandInput);
     bool cmd_pin_status_on_clock(CommandInput);

@@ -1,7 +1,6 @@
 PROJECT=rom
 ACLI=~/acli/bin/arduino-cli
 PLATFORM=rp2040:rp2040:rpipico
-#PORT=/dev/tty.usbmodem212101
 PORT=/dev/tty.usbmodem21101
 
 PICOPROBE_PORT=/dev/ttyACM1

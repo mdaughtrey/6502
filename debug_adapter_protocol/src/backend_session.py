@@ -88,20 +88,29 @@ class BackendSession:
         internal_event = self._build_internal_event(event)
         if internal_event is not None:
             self._handle_internal_event(internal_event)
+            return
 
         if dap_event := self._build_dap_event(event):
             self.event_queue.put(dap_event)
-        elif internal_event is None:
-            self.logger.warning(f"Received event with unknown type: {event.get('event')}")
+        # elif internal_event is None:
+        #     self.logger.warning(f"Received event with unknown type: {event.get('event')}")
 
     def _build_internal_event(self, event: dict) -> Dict[str, Any] | None:
         """Translate target event into an internal synchronization signal."""
-        if event.get("event") == "break":
+        # if event.get("event") == "break":
+        #     return {
+        #         "kind": "execution_stopped",
+        #         "reason": event.get("reason"),
+        #         "raw": event,
+        #     }
+        if event.get("event") == "pinstatus":
+            value = int(event.get("pins"), 16)
             return {
-                "kind": "execution_stopped",
-                "reason": event.get("reason"),
-                "raw": event,
+                "kind": "pin_status",
+                "address": value & 0xFFFF,
+                "data": (value >> 40) & 0xFF,
             }
+
         return None
 
     def set_breakpoints(self, breakpoints: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -210,8 +219,8 @@ class BackendSession:
         dap_map = {
             "break": self._build_stopped_event
         }
-        dap_event = dap_map.get(event.get("event"))(event)
-        return dap_event if dap_event else None
+        dap_event = dap_map.get(event.get("event"))
+        return dap_event(event) if dap_event else None
 
     def _begin_step_wait(self) -> int:
         with self._step_cv:
@@ -222,7 +231,7 @@ class BackendSession:
 
     def _handle_internal_event(self, internal_event: Dict[str, Any]) -> None:
         """Apply internal synchronization updates from target events."""
-        if internal_event.get("kind") != "execution_stopped":
+        if internal_event.get("kind") != "pin_status":
             return
 
         with self._step_cv:
@@ -248,7 +257,7 @@ class BackendSession:
 
         if self.state == BackendState.BREAKPOINT:
             token = self._begin_step_wait()
-            self.target_write(b's')    # Step once
+            self.target_write(b'sp')    # Step once, get pin status
             self.state = BackendState.RUNNING
             if not wait_for_stop:
                 return {"ok": True, "awaited": False}
@@ -256,6 +265,7 @@ class BackendSession:
             completed, internal = self._wait_for_step_completion(token, timeout=timeout)
             if not completed:
                 return {"ok": False, "reason": "step-timeout"}
+            self.queue_event({"event": "break", "address": f"{internal['address']:04x}"})
 
             return {"ok": True, "awaited": True, "internal": internal}
         elif self.state == BackendState.RUNNING:

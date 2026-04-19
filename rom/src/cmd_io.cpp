@@ -123,7 +123,10 @@ namespace cmd_io
     {
         clock_pin_state = !clock_pin_state;
         gpio_put(PIN_CLOCK, clock_pin_state);
-        run_clocked_tasks(clock_pin_state);
+        if (!clock_pin_state)
+        {
+            run_clocked_tasks(clock_pin_state);
+        }
         return true;
     }
 
@@ -176,6 +179,8 @@ namespace cmd_io
         {
             gpio_init(PIN_CLOCK);
             gpio_set_dir(PIN_CLOCK, GPIO_OUT);
+            clock_pin_state = 1;
+            gpio_put(PIN_CLOCK, clock_pin_state);
         }
         clock_pin_state = false;
         bool result = add_repeating_timer_us(period, &lfo_timer_callback, NULL, &lfo_timer);
@@ -203,7 +208,10 @@ namespace cmd_io
  //       printf("sys_clk %u\r\n", sys_clk);
         if (frequency_hz == 0.0)
         {
-            gpio_init(PIN_CLOCK);
+            clock_pin_state = 1;
+            clock_stop(clk_gpout3);
+            gpio_put(PIN_CLOCK, clock_pin_state);
+//            gpio_init(PIN_CLOCK);
             return;
         }
 //        gpio_set_dir(PIN_CLOCK, GPIO_OUT);
@@ -222,50 +230,44 @@ namespace cmd_io
 
         uint16_t wrap = static_cast<int>((divider - idivider) * 65536) -1 ;
         VERBOSE("wrap %u\r\n", wrap);
-        // clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, idivider, wrap);
-        //
         clock_gpio_init_int_frac16(PIN_CLOCK, CLOCKS_CLK_GPOUT3_CTRL_AUXSRC_VALUE_CLK_USB, idivider, wrap);
+    }
+
+    bool cmd_step_instruction(CommandInput input = CommandInput())
+    {
+        do
+        {
+            cmd_step_clock(CommandInput());
+        } while(gpioc_hilo_in_get() & SYNC_MASK);
+        return false;
     }
 
     bool cmd_step_clock(CommandInput input = CommandInput())
     {
-//        if (gpio_get_function(PIN_CLOCK) != GPIO_FUNC_SIO)
-//        {
-//              gpio_init(PIN_CLOCK);
-//              gpio_set_dir(PIN_CLOCK, GPIO_OUT);
-//        }
-
-        gpio_init(PIN_CLOCK);
-        gpio_set_dir(PIN_CLOCK, GPIO_OUT);
-        gpio_put(PIN_CLOCK, 0);
-        sleep_ms(1);
-        if (!clocked_tasks.empty())
-        {
-            run_clocked_tasks(0);
-        }
         gpio_put(PIN_CLOCK, 1);
-        sleep_ms(1);
+        sleep_ms(2);
         if (!clocked_tasks.empty())
         {
             run_clocked_tasks(1);
         }
-//        if (!(pins & RW_MASK)) // Write
-//        {
-//            run_clocked_tasks();
-//        }
+        gpio_put(PIN_CLOCK, 0);
+        sleep_ms(2);
+        if (!clocked_tasks.empty())
+        {
+            run_clocked_tasks(0);
+        }
         return false;
-
     }
+
     bool cmd_pin_status(CommandInput input = CommandInput())
     {
         if (useJSONIO)
         {
 //            char buffer[64];
             uint64_t pins = gpioc_hilo_in_get();
-            std::cout << std::hex << std::setw(64) << std::setfill('0') << pins << std::endl;
-            std::cout << "{\"pins\": \"" << std::hex << std::setw(64) << std::setfill('0') << pins << "\"}" << std::endl;
-            //printf("{\"pins\": \"%08x%08x\"}\r\n", pins >> 32, pins & 0xffffffff);
-            //log_queue.push_back(buffer);
+//            std::cout << std::hex << std::setw(64) << std::setfill('0') << pins << std::endl;
+            std::cout << "{\"event\": \"pinstatus\", \"pins\": \"" << std::hex << std::setw(16) << std::setfill('0') << pins << "\"}" << std::endl;
+            //printf("{\"pins\": \"%08x%08x\"}\r\n", pins >> 32, pins & 0xffffffff); //log_queue.push_back(buffer);
         }
         else
         {
@@ -569,12 +571,15 @@ namespace cmd_io
     void breakpoint_check(void)
     {
 //        char buffer[64];
-        uint16_t addr = static_cast<uint16_t>(gpioc_hilo_in_get() & ADDR_MASK);
+        uint64_t pins = gpioc_hilo_in_get();
+        uint16_t addr = static_cast<uint16_t>(pins & ADDR_MASK);
+        bool pin_sync = static_cast<bool>(pins & SYNC_MASK);
         for (auto iter = breakpoints.begin(); iter != breakpoints.end(); iter++)
         {
-            VERBOSE("Checking addr %04x against %04x", addr, *iter);
+            VERBOSE("Checking addr %04x against %04x, PIN_SYNC %u", addr, *iter, pin_sync);
 //            log_queue.push_back(buffer);
-            if (addr == *iter)
+            if ((addr == *iter) && pin_sync)
+//            if ((addr == *iter))
             {
                 set_clock_frequency(0.0);
                 if (useJSONIO)
@@ -583,7 +588,7 @@ namespace cmd_io
                 }
                 else
                 {
-                    VERBOSE("Break @%04x", addr)
+                    printf("Break @%04x", addr);
                 }
                 break;
             }
