@@ -2,6 +2,7 @@
 
 import threading
 from typing import Any, Dict, List
+from urllib import response
 from events import StoppedEvent
 from enum import Enum
 
@@ -52,10 +53,10 @@ class BackendSession:
         self.variables: Dict[int, List[Dict[str, Any]]] = {1: []}
 
         # Internal synchronization for step/run completion waits.
-        self._step_cv = threading.Condition()
-        self._step_token = 0
-        self._last_completed_step_token = 0
-        self._last_step_internal: Dict[str, Any] | None = None
+        self._sync_cv = threading.Condition()
+        self._sync_token = 0
+        self._last_completed_sync_token = 0
+        self._last_sync_internal: Dict[str, Any] | None = None
 
         self.logger = logger
         # if self.serial_conn is not None:
@@ -67,7 +68,7 @@ class BackendSession:
     def target_write(self, message: bytes) -> None:
         """Write a message to the target device via the serial connection."""
         if self.serial_conn is not None:
-            self.logger.debug(f"Writing to target: {message}")
+            self.logger.info(f"Writing to target: {message}")
             self.serial_conn.write(message)
         
     def mark_initialized(self) -> None:
@@ -110,6 +111,8 @@ class BackendSession:
                 "address": value & 0xFFFF,
                 "data": (value >> 40) & 0xFF,
             }
+        if event.get("kind") == "memory_dump":
+            return event
 
         return None
 
@@ -117,7 +120,7 @@ class BackendSession:
         """Store breakpoints for a source and return DAP-compatible entries."""
         source = breakpoints.get("source")
         path = source.get("name", "<unknown>")
-        self.target_write(b'c') # Clear all breakpoints
+        self.target_write(b'B') # Clear all breakpoints
         stored = []
         for line in breakpoints["lines"]:
             stored_bp = {
@@ -222,49 +225,51 @@ class BackendSession:
         dap_event = dap_map.get(event.get("event"))
         return dap_event(event) if dap_event else None
 
-    def _begin_step_wait(self) -> int:
-        with self._step_cv:
-            self._step_token += 1
-            token = self._step_token
-            self._last_step_internal = None
+    def _begin_sync_wait(self) -> int:
+        with self._sync_cv:
+            self._sync_token += 1
+            token = self._sync_token
+            self._last_sync_internal = None
             return token
 
     def _handle_internal_event(self, internal_event: Dict[str, Any]) -> None:
         """Apply internal synchronization updates from target events."""
-        if internal_event.get("kind") != "pin_status":
+        if internal_event.get("kind") not in ["pin_status", "memory_dump"]:
             return
 
-        with self._step_cv:
-            self._last_completed_step_token = self._step_token
-            self._last_step_internal = internal_event
-            self._step_cv.notify_all()
+        with self._sync_cv:
+            self._last_completed_sync_token = self._sync_token
+            self._last_sync_internal = internal_event
+            self._sync_cv.notify_all()
 
-    def _wait_for_step_completion(self, token: int, timeout: float = 1.0) -> tuple[bool, Dict[str, Any] | None]:
+    def _wait_for_sync_completion(self, token: int, timeout: float = 1.0) -> tuple[bool, Dict[str, Any] | None]:
         """Wait for the target to report a stop corresponding to the issued step."""
-        with self._step_cv:
-            completed = self._step_cv.wait_for(
-                lambda: self._last_completed_step_token >= token,
+        with self._sync_cv:
+            completed = self._sync_cv.wait_for(
+                lambda: self._last_completed_sync_token >= token,
                 timeout=timeout,
             )
             if not completed:
                 return False, None
-            return True, self._last_step_internal
+            return True, self._last_sync_internal
 
-    def next(self, wait_for_stop: bool = True, timeout: float = 1.0) -> Dict[str, Any]:
+    def step_in(self, wait_for_stop: bool = True, timeout: float = 1.0) -> Dict[str, Any]:
         """Handle a 'next' request by resuming execution."""
         if self.serial_conn is None:
             return {"ok": False, "reason": "no-serial-connection"}
 
         if self.state == BackendState.BREAKPOINT:
-            token = self._begin_step_wait()
-            self.target_write(b'sp')    # Step once, get pin status
+            token = self._begin_sync_wait()
+            self.target_write(b's')    # Step once, get pin status
+            self.target_write(b'p')    # Step once, get pin status
             self.state = BackendState.RUNNING
             if not wait_for_stop:
                 return {"ok": True, "awaited": False}
 
-            completed, internal = self._wait_for_step_completion(token, timeout=timeout)
+            completed, internal = self._wait_for_sync_completion(token, timeout=timeout)
             if not completed:
                 return {"ok": False, "reason": "step-timeout"}
+            self.logger.info(f"Step at line {internal['address']:04x}")
             self.queue_event({"event": "break", "address": f"{internal['address']:04x}"})
 
             return {"ok": True, "awaited": True, "internal": internal}
@@ -273,3 +278,59 @@ class BackendSession:
             return {"ok": True, "awaited": False}
 
         return {"ok": False, "reason": f"invalid-state:{self.state.value}"}
+
+    def _build_read_memory_response(self, response):
+        return { "address": response.get("address"),
+                    "data": response.get("data")
+        }
+
+    def next(self, wait_for_stop: bool = True, timeout: float = 1.0) -> Dict[str, Any]:
+        """Handle a 'next' request by resuming execution."""
+        if self.serial_conn is None:
+            return {"ok": False, "reason": "no-serial-connection"}
+
+        if self.state == BackendState.BREAKPOINT:
+            token = self._begin_sync_wait()
+            self.target_write(b'i')    # Step once, get pin status
+            self.target_write(b'p')    # Step once, get pin status
+            self.state = BackendState.RUNNING
+            if not wait_for_stop:
+                return {"ok": True, "awaited": False}
+
+            completed, internal = self._wait_for_sync_completion(token, timeout=timeout)
+            if not completed:
+                return {"ok": False, "reason": "step-timeout"}
+            self.logger.info(f"Step at line {internal['address']:04x}")
+            self.queue_event({"event": "break", "address": f"{internal['address']:04x}"})
+
+            return {"ok": True, "awaited": True, "internal": internal}
+        elif self.state == BackendState.RUNNING:
+            self.target_write(b'r')    # Run
+            return {"ok": True, "awaited": False}
+
+        return {"ok": False, "reason": f"invalid-state:{self.state.value}"}
+
+    def read_memory(self, address: int, length: int, timeout: float = 20.0) -> bytes:
+        """Read memory from the target device via the serial connection."""
+        if self.serial_conn is None:
+            raise RuntimeError("No serial connection available for memory read")
+
+        token = self._begin_sync_wait()
+        # Send memory read command (example format, adjust as needed)
+        self.target_write(f'd{address:04x}/{length:04x}\r\n'.encode())
+        completed, response = self._wait_for_sync_completion(token, timeout=timeout)
+
+        # Read response (this is a placeholder, adjust parsing as needed)
+        # response = self.serial_conn.readline().strip()
+        self.logger.info(f"Received memory read response: {response}")
+        return self._build_read_memory_response(response)
+
+    def target_run(self) -> None:    
+        self.target_write(b'c10\r\n')
+
+    def target_continue(self) -> None:    
+        self.target_write(b'c10\r\n')
+
+    def target_pause(self) -> None:    
+        self.target_write(b'C')
+

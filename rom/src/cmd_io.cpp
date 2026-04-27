@@ -31,19 +31,19 @@
 extern unsigned char rom1_bin[];
 extern unsigned int rom1_bin_len;
 
+typedef std::pair<std::string, void (*)(bool)> ClockedPair;
+
 namespace cmd_io
 {
     void set_databus_out(bool out);
     void set_address_bus_out(bool out);
     bool cmd_pin_status(CommandInput input);
     bool cmd_init_buses(CommandInput);
-    void pin_status(void);
-    void breakpoint_check(void);
+    void pin_status(bool);
+    void breakpoint_check(bool);
     void set_clock_frequency(float frequency_hz);
-//    void memory_operation(void);
     void run_clocked_tasks(bool clock_state);
-//    std::deque<void (*)(void)> task_queue;
-    std::list<std::pair<std::string, void (*)(void)> > clocked_tasks;
+    std::list<ClockedPair> clocked_tasks;
     std::list<std::string> log_queue;
     std::list<uint16_t> breakpoints;
     repeating_timer_t lfo_timer;
@@ -93,6 +93,10 @@ namespace cmd_io
                 gpio_set_dir(ii, GPIO_OUT);
                 gpio_put(ii, 1);
             }
+//            if ((DATA_MASK | ADDR_MASK) & (1ull<<ii))
+//            {
+//                gpio_pull_up(ii);
+//            }
         }
 //        gpio_init(PIN_BUS_ENABLE);
 //        gpio_set_dir(PIN_BUS_ENABLE, GPIO_OUT);
@@ -123,10 +127,7 @@ namespace cmd_io
     {
         clock_pin_state = !clock_pin_state;
         gpio_put(PIN_CLOCK, clock_pin_state);
-        if (!clock_pin_state)
-        {
-            run_clocked_tasks(clock_pin_state);
-        }
+        run_clocked_tasks(clock_pin_state);
         return true;
     }
 
@@ -156,6 +157,7 @@ namespace cmd_io
 
     void run_clocked_tasks(bool clock_state)
     {
+        VERBOSE("Clock %u\r\n", clock_state);
 //        VERBOSE("Run_clocked_tasks: %u tasks", clocked_tasks.size())
 //        if (!clocked_tasks.empty())
 //        {
@@ -164,7 +166,7 @@ namespace cmd_io
         for (auto iter = clocked_tasks.begin(); iter != clocked_tasks.end(); iter++)
         {
 //            VERBOSE("Clocked task %s", iter->first.c_str())
-            iter->second();
+            iter->second(clock_state);
         }
     }
 
@@ -235,26 +237,28 @@ namespace cmd_io
 
     bool cmd_step_instruction(CommandInput input = CommandInput())
     {
+        VERBOSE("cmd_step_instruction entry\r\n");
         do
         {
             cmd_step_clock(CommandInput());
-        } while(gpioc_hilo_in_get() & SYNC_MASK);
+        } while(!(gpioc_hilo_in_get() & SYNC_MASK));
+        VERBOSE("cmd_step_instruction exit\r\n");
         return false;
     }
 
     bool cmd_step_clock(CommandInput input = CommandInput())
     {
-        gpio_put(PIN_CLOCK, 1);
-        sleep_ms(2);
-        if (!clocked_tasks.empty())
-        {
-            run_clocked_tasks(1);
-        }
         gpio_put(PIN_CLOCK, 0);
         sleep_ms(2);
         if (!clocked_tasks.empty())
         {
             run_clocked_tasks(0);
+        }
+        gpio_put(PIN_CLOCK, 1);
+        sleep_ms(2);
+        if (!clocked_tasks.empty())
+        {
+            run_clocked_tasks(1);
         }
         return false;
     }
@@ -271,7 +275,7 @@ namespace cmd_io
         }
         else
         {
-            pin_status();
+            pin_status(false);
         }
         return false;
     }
@@ -305,7 +309,7 @@ namespace cmd_io
 //        }
 //    }
 
-    void pin_status(void)
+    void pin_status(bool clock_state)
     {
         char buffer[128];
         sprintf(buffer, "     Data          Addr                   Data     SRRni r. B     C           AddrH    AddrL");
@@ -313,6 +317,7 @@ namespace cmd_io
         sprintf(buffer, ".... ..    .. .... .... ........ ........ ........ YYWIQ.S. e.....K. ........ FEDCBA98 76543210");
         log_queue.push_back(buffer);
         uint64_t pins = gpioc_hilo_in_get();
+//        uint64_t pins = sio_hw->gpio_in | ((uint64_t)sio_hw->gpio_hi_in << 32);
         uint64_t mask = (static_cast<uint64_t>(sio_hw->gpio_hi_oe) << 32) | static_cast<uint64_t>(sio_hw->gpio_oe);
         sprintf(buffer, "%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s",
             static_cast<uint16_t>(pins >> 48), static_cast<uint8_t>(pins >> 40), static_cast<uint8_t>(pins >> 32),
@@ -334,7 +339,7 @@ namespace cmd_io
 
     bool cmd_pin_status_on_clock(CommandInput input = CommandInput())
     {
-        clocked_tasks.push_back(std::pair("Pins", pin_status));
+        clocked_tasks.push_back(ClockedPair("Pins", pin_status));
         return false;
     }
 
@@ -532,7 +537,28 @@ namespace cmd_io
         }
         memdump_addr = std::stoi(input[1], nullptr, 16);
         memdump_length = std::stoi(input[2], nullptr, 16);
-        log_queue.push_back(rom_ram::dump_memory(memdump_addr, memdump_length));
+        if (useJSONIO)
+        {
+            std::vector<uint8_t> memory = rom_ram::read_memory(memdump_addr, memdump_length);
+            std::cout << "{\"kind\":\"memory_dump\", \"address\": \""
+                << std::hex << std::setw(4) << std::setfill('0') << memdump_addr
+                << "\", \"data\":[";
+            bool first = true;
+            for (auto iter = memory.begin(); iter != memory.end(); iter++)
+            {
+                if (!first)
+                {
+                    std::cout << ",";
+                }
+                std::cout << "\"" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter) << "\"";
+                first = false;
+            }
+            std::cout << "]}" << std::endl;
+        }
+        else
+        {
+            log_queue.push_back(rom_ram::dump_memory(memdump_addr, memdump_length));
+        }
         return false;
     }
 
@@ -551,7 +577,8 @@ namespace cmd_io
 
     bool cmd_dump_memory_on_clock(CommandInput input = CommandInput())
     {
-        clocked_tasks.push_back(std::pair("Memory", [](){ VERBOSE("lambda"); log_queue.push_back(rom_ram::dump_memory(memdump_addr, memdump_length)); }));
+        clocked_tasks.push_back(ClockedPair("Memory",
+                    [](bool){ VERBOSE("lambda"); log_queue.push_back(rom_ram::dump_memory(memdump_addr, memdump_length)); }));
         VERBOSE("Dumping %04x/%04x on clock", memdump_addr, memdump_length)
         return false;
     }
@@ -568,7 +595,7 @@ namespace cmd_io
         }
     }
 
-    void breakpoint_check(void)
+    void breakpoint_check(bool clock_state)
     {
 //        char buffer[64];
         uint64_t pins = gpioc_hilo_in_get();
@@ -617,7 +644,7 @@ namespace cmd_io
         }
         if (false == found)
         {
-            clocked_tasks.push_back(std::pair("Breakpoint", breakpoint_check));
+            clocked_tasks.push_back(ClockedPair("Breakpoint", breakpoint_check));
         }
         return false;
     }
@@ -677,11 +704,11 @@ namespace cmd_io
         return false;
     }
 
-    bool cmd_run(CommandInput input = CommandInput())
-    {
-        set_clock_frequency(3.0);
-        return false;
-    }
+//    bool cmd_run(CommandInput input = CommandInput())
+//    {
+//        set_clock_frequency(100.0);
+//        return false;
+//    }
 
     bool cmd_upload_rom_image(CommandInput input = CommandInput())
     {
@@ -717,39 +744,4 @@ namespace cmd_io
         useJSONIO = use;
         return false;        
     }
-
-//    bool cmd_test_io_pins(CommandInput input = CommandInput())
-//    {
-//        pin_toggle_number = 0;
-////        pin_toggle_timer.user_data = static_cast<void *>(&pin_toggle_number);
-//        bool result = add_repeating_timer_us(50000, &pin_test_callback, NULL, &pin_toggle_timer);
-//        return false;
-//    }
-//
-//    bool noninteractive_set_breakpoint(CommandInput)
-//    {
-//        return false;
-//    }
-//
-//    bool noninteractive_clear_breakpoint(CommandInput)
-//    {
-//        return false;
-//    }
-//
-//    bool noninteractive_dump_memory(CommandInput)
-//    {
-//        return false;
-//    }
-//
-//    bool noninteractive_run(CommandInput)
-//    {
-//        return false;
-//    }
-//
-//    bool noninteractive_step(CommandInput)
-//    {
-//        return false;
-//    }
-
-
 } // namespace cmd_io

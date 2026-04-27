@@ -48,7 +48,7 @@ class InitializeHandler(BaseHandler):
             "supportsBreakpointLocationsRequest": True,
         }
 
-        self.backend_session.target_write(b'xxdicu')  # Send initial command to target to indicate we're ready (optional, depends on target protocol)
+        self.backend_session.target_write(b'xxdIcu')  # Send initial command to target to indicate we're ready (optional, depends on target protocol)
         # After sending initialize response, send initialized event to signal ready for configuration
         initialized_event = InitializedEvent(seq=0).__dict__  # seq will be assigned by adapter
         

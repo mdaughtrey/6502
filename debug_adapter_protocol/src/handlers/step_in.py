@@ -4,4 +4,5 @@ from .base_handler import BaseHandler
 
 class StepInHandler(BaseHandler):
     def handle(self, request: Dict[str, Any]) -> tuple[Dict[str, Any], list]:
+        self.backend_session.step_in()
         return self.create_response(request), []

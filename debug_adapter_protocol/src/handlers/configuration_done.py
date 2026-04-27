@@ -17,8 +17,7 @@ class ConfigurationDoneHandler(BaseHandler):
             self.backend_session.start_serial_listener()
         except Exception:
             self.logger.exception('Failed to start serial listener')
-
-        self.backend_session.target_write(b'r')
+        self.backend_session.target_run()
         # event = self.create_event(event="stopped",
         #                            body=StoppedEvent(
         #                                reason="breakpoint",

@@ -38,13 +38,22 @@ def main(
         "--serial",
         help="The serial port to use",
     ),
-    protocol: str = typer.Option("tcp", help="Protocol to use: 'tcp' or 'ws' (websocket)")
+    protocol: str = typer.Option("tcp", help="Protocol to use: 'tcp' or 'ws' (websocket)"),
+    console_log_level: str = typer.Option(
+        "INFO",
+        "--console-log-level",
+        "--console-level",
+        help="Console log level: DEBUG, INFO, WARNING, ERROR, or CRITICAL",
+    ),
 ):
     """Start the Debug Adapter Protocol listener. This runs when the script is executed
     without a subcommand so `python src/dap.py --protocol tcp` works directly.
     """
     # Initialize logging
-    setup_logging()
+    try:
+        setup_logging(console_level=console_log_level)
+    except ValueError as e:
+        raise typer.BadParameter(str(e), param_hint="--console-log-level") from e
     logger.info(f"Starting Debug Adapter on {host}:{port}")
     logger.debug(f"Serial port configured: {serial_port}")
 
@@ -88,10 +97,22 @@ def run(
         "--serial",
         help="The serial port to use",
     ),
-    protocol: str = typer.Option("tcp", help="Protocol to use: 'tcp' or 'ws' (websocket)")
+    protocol: str = typer.Option("tcp", help="Protocol to use: 'tcp' or 'ws' (websocket)"),
+    console_log_level: str = typer.Option(
+        "INFO",
+        "--console-log-level",
+        "--console-level",
+        help="Console log level: DEBUG, INFO, WARNING, ERROR, or CRITICAL",
+    ),
 ):
     """Alias for the main command for compatibility with `run` subcommand usage."""
-    return main(port=port, host=host, serial_port=serial_port, protocol=protocol)
+    return main(
+        port=port,
+        host=host,
+        serial_port=serial_port,
+        protocol=protocol,
+        console_log_level=console_log_level,
+    )
 
 
 def listen_for_requests(host: str, port: int, dispatcher: Dispatcher):

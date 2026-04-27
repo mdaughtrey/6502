@@ -1,15 +1,15 @@
 """Logging configuration for DAP handlers."""
 
 import logging
-import os
 from pathlib import Path
 
 
-def setup_logging(log_file: str = "debug_adapter.log") -> logging.Logger:
+def setup_logging(log_file: str = "debug_adapter.log", console_level: str = "INFO") -> logging.Logger:
     """Set up logging to both console and file.
     
     Args:
         log_file: Path to the log file.
+        console_level: Log level for console handler.
         
     Returns:
         A configured logger instance.
@@ -23,6 +23,19 @@ def setup_logging(log_file: str = "debug_adapter.log") -> logging.Logger:
     # Create logger
     logger = logging.getLogger("dap")
     logger.setLevel(logging.DEBUG)
+
+    level_map = {
+        "CRITICAL": logging.CRITICAL,
+        "ERROR": logging.ERROR,
+        "WARNING": logging.WARNING,
+        "INFO": logging.INFO,
+        "DEBUG": logging.DEBUG,
+        "NOTSET": logging.NOTSET,
+    }
+    normalized_console_level = str(console_level).upper()
+    if normalized_console_level not in level_map:
+        allowed = ", ".join(level_map.keys())
+        raise ValueError(f"Invalid console log level '{console_level}'. Allowed values: {allowed}")
     
     # Clear any existing handlers
     logger.handlers.clear()
@@ -35,7 +48,7 @@ def setup_logging(log_file: str = "debug_adapter.log") -> logging.Logger:
     
     # Console handler
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)
+    console_handler.setLevel(level_map[normalized_console_level])
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     

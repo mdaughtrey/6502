@@ -19,12 +19,11 @@ SELECTIO = DDRB
 .proc via6522_timer_init
     lda #ACR_T1B
     sta ACR             ; Store to Aux Control Register
-    lda #(IER_TIMER1 | IER_SET)  ; Enable interrupt
-    sta IER             ; ...
-;     cli
-    lda #<$00ff
+    ; lda #(IER_TIMER1 | IER_SET)  ; Enable interrupt
+    ; sta IER             ; ...
+    lda #<$000f
     sta T1CL            ; ...
-    lda #>$00ff
+    lda #>$000f
     sta T1CH            ; ...
     rts
 .endproc

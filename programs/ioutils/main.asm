@@ -34,9 +34,9 @@
     jsr via6522_timer_init
 ;    jsr i2c_init
 ;    jsr lcd_init
-:
 ;    jsr lcd_loop
 ;    jsr chaser_loop
+:
     jmp :-
 ;    lda #SELECT_LCD
 ;    sta SELECTPORT

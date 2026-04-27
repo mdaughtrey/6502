@@ -2,6 +2,7 @@ PROJECT=rom
 ACLI=~/acli/bin/arduino-cli
 PLATFORM=rp2040:rp2040:rpipico
 PORT=/dev/tty.usbmodem21101
+PICO_SDK=/Users/mattd/dev/6502/rom/pico-sdk
 
 PICOPROBE_PORT=/dev/ttyACM1
 UF2=build/${PROJECT}.uf2
@@ -15,10 +16,10 @@ OBJS=src/rom.cpp src/menu.cpp src/io_menu.cpp src/via6522.cpp
 
 
 compile: 
-	PICO_SDK_PATH=~/dev/pico-sdk/ make -C build
+	PICO_SDK_PATH=${PICO_SDK} make -C build
 
 build:
-	cmake -S . -B build -DPICO_SDK_PATH=~/dev/pico-sdk/ -DCMAKE_BUILD_TYPE=Debug -DPICO_PLATFORM=rp2350
+	cmake -S . -B build -DPICO_SDK_PATH=${PICO_SDK} -DCMAKE_BUILD_TYPE=Debug -DPICO_PLATFORM=rp2350
 
 clean:
 	rm -rf build
