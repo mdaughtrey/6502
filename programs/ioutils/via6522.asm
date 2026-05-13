@@ -17,13 +17,17 @@ SELECTIO = DDRB
 ;
 ; Set up a 10ms timer, kicks off an interrupt
 .proc via6522_timer_init
-    lda #ACR_T1B
+    lda #(ACR_T1A | ACR_T1B)   ; Set Timer1 to free running mode, counting down from T1C/T1CH
     sta ACR             ; Store to Aux Control Register
-    ; lda #(IER_TIMER1 | IER_SET)  ; Enable interrupt
+    ; ; lda #(IER_TIMER1 | IER_SET)  ; Enable interrupt
     ; sta IER             ; ...
-    lda #<$000f
-    sta T1CL            ; ...
-    lda #>$000f
+    lda #<$00ff
+    sta T1LL            ; ...
+    lda #>$00ff
+    sta T1LH            ; ...
+;        lda #<$00ff
+;    sta T1CL            ; ...
+    lda #>$00ff
     sta T1CH            ; ...
     rts
 .endproc
@@ -33,5 +37,11 @@ SELECTIO = DDRB
     rts
 .endproc
 
-.export via6522_init, via6522_timer_init, via6522_isr_ret
+.proc via6522_count
+    inc DATAPORT
+    inc SELECTPORT
+    rts
+.endproc
+
+.export via6522_init, via6522_timer_init, via6522_isr_ret, via6522_count
 .export DATAPORT, DATAIO, SELECTPORT, SELECTIO

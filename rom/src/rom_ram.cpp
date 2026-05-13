@@ -111,7 +111,7 @@ namespace rom_ram
                 continue;
             }
             gpio_put_masked64(cmd_io::ADDR_MASK, addr);
-            sleep_us(10);
+            sleep_us(1);
             (*iter) = static_cast<uint8_t>(gpioc_hilo_in_get() >> 40);
             iter++;
         }

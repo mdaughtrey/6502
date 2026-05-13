@@ -30,6 +30,8 @@ mc: compile  	# mount and copy
 #	sudo umount ${MOUNT}
 	sleep 3
 	screen ${PORT} 460800
+	reset
+	stty sane
 	
 
 upload: 

@@ -133,8 +133,10 @@ namespace cmd_io
 
     static bool pin_toggle_callback(repeating_timer_t *t)
     {
+        VERBOSE("pin_toggle_callback %u", pin_toggle_number);
         toggle_pin_state = !toggle_pin_state;
-        gpio_put(*static_cast<uint8_t *>(t->user_data), toggle_pin_state);
+        // gpio_put(*static_cast<uint8_t *>(t->user_data), toggle_pin_state);
+        gpio_put(pin_toggle_number, toggle_pin_state);
         return true;
     }
 
@@ -157,7 +159,6 @@ namespace cmd_io
 
     void run_clocked_tasks(bool clock_state)
     {
-        VERBOSE("Clock %u\r\n", clock_state);
 //        VERBOSE("Run_clocked_tasks: %u tasks", clocked_tasks.size())
 //        if (!clocked_tasks.empty())
 //        {
@@ -176,7 +177,7 @@ namespace cmd_io
         VERBOSE("frequency %f\r\n", frequency_hz);
 
         uint64_t period = static_cast<uint64_t>(1.0/frequency_hz*5e5); // *500.0;
-        VERBOSE("set_clock_frequency_low called with %f, period is %llu us\r\n", frequency_hz, period)
+        VERBOSE("set_clock_frequency_low called with %f, period is %llu us\r\n", frequency_hz, period);
         if (gpio_get_function(PIN_CLOCK) != GPIO_FUNC_SIO)
         {
             gpio_init(PIN_CLOCK);
@@ -206,7 +207,7 @@ namespace cmd_io
         cancel_repeating_timer(&lfo_timer);
         
         uint32_t sys_clk = clock_get_hz(clk_usb);
-        VERBOSE("Clock frequency %f Hz", frequency_hz)
+        VERBOSE("Clock frequency %f Hz", frequency_hz);
  //       printf("sys_clk %u\r\n", sys_clk);
         if (frequency_hz == 0.0)
         {
@@ -319,7 +320,7 @@ namespace cmd_io
         uint64_t pins = gpioc_hilo_in_get();
 //        uint64_t pins = sio_hw->gpio_in | ((uint64_t)sio_hw->gpio_hi_in << 32);
         uint64_t mask = (static_cast<uint64_t>(sio_hw->gpio_hi_oe) << 32) | static_cast<uint64_t>(sio_hw->gpio_oe);
-        sprintf(buffer, "%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s",
+        sprintf(buffer, "%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s <- Data",
             static_cast<uint16_t>(pins >> 48), static_cast<uint8_t>(pins >> 40), static_cast<uint8_t>(pins >> 32),
             static_cast<uint16_t>(pins >> 16), static_cast<uint16_t>(pins), 
             std::bitset<8>(pins >> 56).to_string().c_str(), std::bitset<8>(pins >> 48).to_string().c_str(), 
@@ -327,7 +328,7 @@ namespace cmd_io
             std::bitset<8>(pins >> 24).to_string().c_str(), std::bitset<8>(pins >> 16).to_string().c_str(), 
             std::bitset<8>(pins >> 8).to_string().c_str(), std::bitset<8>(pins).to_string().c_str());
         log_queue.push_back(buffer);
-        sprintf(buffer, "%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s",
+        sprintf(buffer, "%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s <- In=0 Out=1",
             static_cast<uint16_t>(mask >> 48), static_cast<uint8_t>(mask >> 40), static_cast<uint8_t>(mask >> 32),
             static_cast<uint16_t>(mask >> 16), static_cast<uint16_t>(mask), 
             std::bitset<8>(mask >> 56).to_string().c_str(), std::bitset<8>(mask >> 48).to_string().c_str(), 
@@ -355,17 +356,12 @@ namespace cmd_io
 //        return false;
 //    }
 
-    bool cmd_reset(CommandInput input = CommandInput())
+    void run_x_clock_cycles(uint16_t cycles)
     {
-        VERBOSE("Asserting Reset");
-        gpio_init(PIN_RESET);
-        gpio_set_dir(PIN_RESET, GPIO_OUT);
-        cancel_repeating_timer(&pin_toggle_timer);
-        // Hold the reset for 7 cycles
         if (0.0 == frequency_hz)
         {
             VERBOSE("Generating my own clock cycles");
-            for (auto ii = 0; ii < 7; ii++)
+            for (auto ii = 0; ii < cycles; ii++)
             {
                 gpio_put(PIN_CLOCK, 0);
                 sleep_ms(10);
@@ -375,47 +371,21 @@ namespace cmd_io
         }
         else
         {
-//            gpio_put(PIN_RESET, 0);
-            float sleepfor = 7000/frequency_hz;
+            float sleepfor = cycles * 1000 / frequency_hz;
             VERBOSE("sleeping for %f ms", sleepfor);
             sleep_ms(sleepfor);
-//            gpio_put(PIN_RESET, 1);
         }
-        sleep_ms(10);
-        VERBOSE("Deasserting Reset");
-//        set_clock_frequency(0.0);
-//        gpio_init(PIN_CLOCK);
-//        gpio_set_dir(PIN_CLOCK, GPIO_OUT);
-//        gpio_put(PIN_CLOCK, 1);
-        cmd_init_buses(CommandInput());
-//        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
-//
-//        gpio_put(PIN_RESET, 0);
-//        for (auto ii = 0; ii < 2; ii++)
-//        {
-//            gpio_put(PIN_CLOCK, 0);
-//            sleep_ms(10);
-//            gpio_put(PIN_CLOCK, 1);
-//            sleep_ms(10);
-//        }
-//        gpio_put(PIN_RESET, 1);
-//        for (auto ii = 0; ii < 8; ii++)
-//        {
-//            gpio_put(PIN_CLOCK, 0);
-//            sleep_ms(10);
-//            gpio_put(PIN_CLOCK, 1);
-//            sleep_ms(10);
-//        }
-//        for (auto ii = 0; ii < 2; ii++)
-//        {
-//            gpio_put(PIN_CLOCK, 0);
-//            sleep_ms(10);
-//            gpio_put(PIN_CLOCK, 1);
-//            sleep_ms(10);
-////            add_alarm_in_ms(8+ii, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 0); return 0; }, NULL, true);
-////            add_alarm_in_ms(16+ii, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_CLOCK, 1); return 0; }, NULL, true);
-//        }
-//        add_alarm_in_ms(500, [](alarm_id_t id, void *user_data) -> int64_t { gpio_put(PIN_RESET, 1); return 0; }, NULL, true);
+    }
+
+    bool cmd_reset(CommandInput input = CommandInput())
+    {
+        cancel_repeating_timer(&pin_toggle_timer);
+        VERBOSE("Assert Reset, 3 Cycles");
+        gpio_put(PIN_RESET, 0);
+        run_x_clock_cycles(3);
+        VERBOSE("Deassert Reset, 7 Cycles");
+        gpio_put(PIN_RESET, 1);
+        run_x_clock_cycles(7);
         return false;
     }
 
@@ -461,7 +431,7 @@ namespace cmd_io
 //        std::string pin(value.substr(1,2));
 //        std::string state(value.substr(3,1));
         uint8_t pin_num = std::stoi(input[2]);
-        VERBOSE("io: %s, pin: %u\r\n", input[1].c_str(), pin_num)
+        VERBOSE("io: %s, pin: %u\r\n", input[1].c_str(), pin_num);
         gpio_init(pin_num);
         gpio_set_dir(pin_num, "o" == input[1] ? GPIO_OUT : GPIO_IN);
         if (input.size() >= 2)
@@ -579,7 +549,7 @@ namespace cmd_io
     {
         clocked_tasks.push_back(ClockedPair("Memory",
                     [](bool){ VERBOSE("lambda"); log_queue.push_back(rom_ram::dump_memory(memdump_addr, memdump_length)); }));
-        VERBOSE("Dumping %04x/%04x on clock", memdump_addr, memdump_length)
+        VERBOSE("Dumping %04x/%04x on clock", memdump_addr, memdump_length);
         return false;
     }
 

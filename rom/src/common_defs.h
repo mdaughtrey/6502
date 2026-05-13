@@ -1,7 +1,1 @@
-#define VERBOSE(...) \
-if (verbose) \
-{ \
-    char buffer[256]; \
-    sprintf(buffer, __VA_ARGS__); \
-    log_queue.push_back(buffer); \
-}
+#define VERBOSE(...) do { char buffer[256]; snprintf(buffer, sizeof(buffer),  __VA_ARGS__); log_queue.push_back(buffer); } while (0)

@@ -17,6 +17,7 @@
 .segment "CODE"
 .proc isr
     sei
+    rti
 ;    lda $40
 ;    sta ORAIRA
 ;    sta ORBIRB
@@ -26,17 +27,23 @@
     rti
 .endproc
 
+COUNTER: .res 1
+
 .proc main
     sei
 ;    jsr var_init
-;    jsr via6522_init
+    jsr via6522_init
 ;    jsr chaser_init
-    jsr via6522_timer_init
+;    jsr via6522_timer_init
+
 ;    jsr i2c_init
 ;    jsr lcd_init
 ;    jsr lcd_loop
 ;    jsr chaser_loop
 :
+;    inc SELECTPORT
+     jsr via6522_count
+    inc COUNTER
     jmp :-
 ;    lda #SELECT_LCD
 ;    sta SELECTPORT
