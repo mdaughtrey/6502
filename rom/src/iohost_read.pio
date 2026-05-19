@@ -1,0 +1,46 @@
+.program iohost_read
+
+loop:
+    in pins, 16
+    mov x, isr
+    jmp x!=y no_match
+    irq 0
+no_match:
+    jmp loop
+
+% c-sdk {
+uint iohost_read_program_init(
+    PIO pio,
+    uint sm,
+    uint offset,
+    uint first_pin,
+    uint pattern
+) {
+    // Configure 16 pins as inputs
+//    for (int i = 0; i < 16; i++)
+//        pio_gpio_init(pio, first_pin + i);
+
+//    pio_sm_set_consecutive_pindirs(pio, sm, first_pin, 16, false);
+
+    // Configure shift registers
+    pio_sm_config c = pio_get_default_sm_config();
+    sm_config_set_in_pins(&c, first_pin);
+    sm_config_set_in_shift(&c, true, true, 16);  // shift right, autopush, 16
+
+    // Load program
+    pio_sm_init(pio, sm, offset, &c);
+
+    // Push pattern into OSR
+    pio_sm_put_blocking(pio, sm, pattern);
+
+    // Enable IRQ0 from this PIO
+    pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
+
+    // Start state machine
+    pio_sm_set_enabled(pio, sm, true);
+
+    return offset;
+}
+
+%}
+

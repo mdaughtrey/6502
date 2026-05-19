@@ -9,6 +9,7 @@
 #include "rom_ram.h"
 #include "validator.h"
 #include "via6522.h"
+#include "iohost_read.h"
 // #include "debugger.h"
 
 namespace menu
@@ -96,6 +97,8 @@ Command commands_io[] = {
 },
 {'o', "Toggle Pin 10hz (NN)", Validator("([0-9]{2})", "Pin Number (NN)"), cmd_io::cmd_toggle_pin_10hz },
 //{'T', "Test I/O Pins", Validator(""), cmd_io::cmd_test_io_pins },
+{'q', "Enable IOHost IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_set_isr(true); return false; }},
+{'Q', "Disable IOHost IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_set_isr(false); return false; }},
 {'t', "Clear Clocked Tasks", Validator(""), cmd_io::cmd_clear_clocked_tasks },
 {'v', "Verbose logging", Validator(""), [](CommandInput) -> bool { cmd_io::cmd_verbose_logging(true); return false; }},
 {'V', "Terse logging", Validator(""), [](CommandInput) ->bool { cmd_io::cmd_verbose_logging(false); return false; }},
