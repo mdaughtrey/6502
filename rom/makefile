@@ -16,6 +16,7 @@ OBJS=src/rom.cpp src/menu.cpp src/io_menu.cpp src/via6522.cpp
 
 
 compile: 
+	-rm src/iohost_read.pio.h
 	PICO_SDK_PATH=${PICO_SDK} make -C build
 
 build:

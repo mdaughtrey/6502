@@ -25,7 +25,7 @@ int main()
         }
         cmd_io::loop();
         via6522::loop();
-//        iohost_read::loop();
+        iohost_read::loop();
     }
     return 0;
 }

@@ -2,6 +2,7 @@
 .include "via6522_import.inc"
 .include "lcd.inc"
 .include "chaser.inc"
+.include "iohost_import.inc"
 
 .import i2c_init, i2c_byte_from_addr
 ; .import I2C_DEVICE: zeropage, I2C_ADDR: zeropage
@@ -32,7 +33,8 @@ COUNTER: .res 1
 .proc main
     sei
 ;    jsr var_init
-    jsr via6522_init
+;    jsr via6522_init
+    jsr iohost_init
 ;    jsr chaser_init
 ;    jsr via6522_timer_init
 
@@ -40,21 +42,22 @@ COUNTER: .res 1
 ;    jsr lcd_init
 ;    jsr lcd_loop
 ;    jsr chaser_loop
-:
+;:
 ;    inc SELECTPORT
-     jsr via6522_count
-    inc COUNTER
-    jmp :-
+    ; inc COUNTER
+    ; jmp :-
 ;    lda #SELECT_LCD
 ;    sta SELECTPORT
 ;    lda #$ff
 ;    sta DATAIO
 
-main_loop:
-    jsr read_keys ; returns key bitmap in A
+@main_loop:
+;    jsr via6522_count
+    jsr iohost_loop
+    ; jsr read_keys ; returns key bitmap in A
 ;    jsr logic ; returns A: display bitmap
 ;    jsr display
-    jmp main_loop
+    jmp @main_loop
 
 .endproc                ; main
 

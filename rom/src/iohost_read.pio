@@ -1,12 +1,16 @@
 .program iohost_read
 
+//.wrap_target
+pull block          ; FIFO -> OSR
+mov y, osr          ; OSR -> Y
 loop:
-    in pins, 16
-    mov x, isr
-    jmp x!=y no_match
-    irq 0
-no_match:
-    jmp loop
+    in pins, 16     ; read 16 pins to Input Shift Register
+    mov x, isr      ; load to X
+//	push noblock	; push to RX FIFO
+    jmp x!=y, loop  ; if no match, skip
+	push noblock	
+    irq 0           ; else signal ISR
+//.wrap
 
 % c-sdk {
 uint iohost_read_program_init(
@@ -16,29 +20,30 @@ uint iohost_read_program_init(
     uint first_pin,
     uint pattern
 ) {
+    int rc;
     // Configure 16 pins as inputs
 //    for (int i = 0; i < 16; i++)
 //        pio_gpio_init(pio, first_pin + i);
-
+//
 //    pio_sm_set_consecutive_pindirs(pio, sm, first_pin, 16, false);
 
     // Configure shift registers
     pio_sm_config c = pio_get_default_sm_config();
     sm_config_set_in_pins(&c, first_pin);
-    sm_config_set_in_shift(&c, true, true, 16);  // shift right, autopush, 16
+//    sm_config_set_in_shift(&c, true, true, 16);  // shift right, autopush, 16
 
     // Load program
-    pio_sm_init(pio, sm, offset, &c);
-
+    rc = pio_sm_init(pio, sm, offset, &c);
+    if (0 != rc)
+    {
+        std::cout << "pio_sm_init " << rc << std::endl;
+    }
     // Push pattern into OSR
+    std::cout << "Pushing pattern " << std::hex << pattern << std::endl;
     pio_sm_put_blocking(pio, sm, pattern);
-
-    // Enable IRQ0 from this PIO
+    pio_interrupt_clear(pio, 0);
     pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
-
-    // Start state machine
-    pio_sm_set_enabled(pio, sm, true);
-
+    pio_sm_set_enabled(pio0, sm, true);
     return offset;
 }
 

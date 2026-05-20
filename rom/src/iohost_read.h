@@ -8,6 +8,7 @@ namespace iohost_read
     void init();
     void loop();
     void cmd_set_isr(bool);
+    void cmd_init_irq(void);
 }
 
 

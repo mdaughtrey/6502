@@ -99,6 +99,7 @@ Command commands_io[] = {
 //{'T', "Test I/O Pins", Validator(""), cmd_io::cmd_test_io_pins },
 {'q', "Enable IOHost IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_set_isr(true); return false; }},
 {'Q', "Disable IOHost IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_set_isr(false); return false; }},
+{'T', "Init IOHost IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_init_irq(); return false; }},
 {'t', "Clear Clocked Tasks", Validator(""), cmd_io::cmd_clear_clocked_tasks },
 {'v', "Verbose logging", Validator(""), [](CommandInput) -> bool { cmd_io::cmd_verbose_logging(true); return false; }},
 {'V', "Terse logging", Validator(""), [](CommandInput) ->bool { cmd_io::cmd_verbose_logging(false); return false; }},
