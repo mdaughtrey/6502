@@ -71,6 +71,7 @@ Command commands_io[] = {
 },
 {'e', "Bus Enable", Validator(""), cmd_io::cmd_bus_active },
 {'E', "Bus Disable", Validator(""), cmd_io::cmd_bus_inactive },
+{'f', "Read RxFIFO", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_read_rx_fifo(); return false; }},
 {'h', "help", Validator(""), cmd_help },
 {
     'I', "I/O Value",
@@ -85,7 +86,7 @@ Command commands_io[] = {
 {'M', "memory dump on clock", Validator(""), cmd_io::cmd_dump_memory_on_clock },
 //{'m', "Run Memory Operation", validator,cmd_io::cmd_memory_operation },
 //{'M', "Run Memory Operation on Clock", validator, cmd_io::cmd_memory_operation_on_clock },
-{'I', "Init Buses", Validator(""), cmd_io::cmd_init_buses },
+{'U', "Init Buses", Validator(""), cmd_io::cmd_init_buses },
 {'p', "Pin Status", Validator(""), cmd_io::cmd_pin_status },
 {'P', "Pin Status on Clock", Validator(""), cmd_io::cmd_pin_status_on_clock },
 {'R', "Reset", Validator(""), cmd_io::cmd_reset },

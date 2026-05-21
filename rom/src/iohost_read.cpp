@@ -10,15 +10,14 @@ extern const pio_program_t iohost_read_program;
 namespace iohost_read
 {
     volatile bool isr = false;
-	volatile uint16_t last_isr_value = 0;
-	volatile uint16_t last_fifo_value = 0;
+    volatile uint16_t last_isr_value = 0;
+    volatile uint16_t last_fifo_value = 0;
     void iohost_read_isr()
     {
         isr = true;
-//        std::cout << "ISR" << std::endl;
-//        uint16_t value = pio_sm_get_blocking(pio0, 0);
-//        std::cout << "Value: " << std::hex << value << std::endl;
-//        irq_set_enabled(PIO0_IRQ_0, false);
+        uint16_t value = pio_sm_get_blocking(pio0, 0);
+        std::cout << "Value: " << std::hex << value << std::endl;
+        irq_set_enabled(PIO0_IRQ_0, false);
         pio_interrupt_clear(pio0, 0);
     }
 
@@ -36,13 +35,15 @@ namespace iohost_read
         std::cout << "IOHost offset " << offset << std::endl;
 
         // State machine, instruction offset 0, base pin 0, pattern 0x0300
-        rc = iohost_read_program_init(pio, sm, 0, 0, 0x0300);
+        rc = iohost_read_program_init(pio, sm, offset, 0, 0x0300);
         if (0 != rc)
         {
             std::cout << "IOHost Init Error " << rc << std::endl;
         }
         irq_set_exclusive_handler(PIO0_IRQ_0, iohost_read_isr);
+		std::cout << "Before enable: TX FIFO has " <<  pio_sm_get_tx_fifo_level(pio, sm) << " elements" << std::endl;
         pio_sm_set_enabled(pio, sm, true);
+		std::cout << "After enable: TX FIFO has " <<  pio_sm_get_tx_fifo_level(pio, sm) << " elements" << std::endl;
     }
 
     void cmd_set_isr(bool set)
@@ -54,18 +55,26 @@ namespace iohost_read
         irq_set_enabled(PIO0_IRQ_0, set);
     }
 
+    void cmd_read_rx_fifo()
+    {
+		std::cout << "Reading FIFO" << std::endl;
+		int count = 8;
+    	while ((!pio_sm_is_rx_fifo_empty(pio0, 0)) && count--) 
+    	{
+    		uint32_t raw = pio_sm_get(pio0, 0);
+//    		uint16_t value = raw & 0xFFFF;
+
+    		// First FIFO entry = autopush
+    		// Second FIFO entry = manual push
+//    		last_fifo_value = value;
+
+    		std::cout << "0x" << std::hex << std::setw(8) << std::setfill('0') << raw << " " << std::endl;
+    	}
+		std::cout << "Done" << std::endl;
+    }
+
     void loop()
     {
-		while (!pio_sm_is_rx_fifo_empty(pio0, 0)) {
-				uint32_t raw = pio_sm_get(pio0, 0);
-				uint16_t value = raw & 0xFFFF;
-
-				// First FIFO entry = autopush
-				// Second FIFO entry = manual push
-				last_fifo_value = value;
-
-				std::cout << "FIFO: 0x" << std::hex << value << std::endl;
-			}
 
         if (isr)
         {
