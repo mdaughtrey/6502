@@ -8,66 +8,183 @@
 #include "hardware/pio.h"
 #endif
 
-// ----------- //
-// iohost_read //
-// ----------- //
+// --------- //
+// fifo_echo //
+// --------- //
 
-#define iohost_read_wrap_target 0
-#define iohost_read_wrap 4
-#define iohost_read_pio_version 1
+#define fifo_echo_wrap_target 0
+#define fifo_echo_wrap 4
+#define fifo_echo_pio_version 1
 
-static const uint16_t iohost_read_program_instructions[] = {
+static const uint16_t fifo_echo_program_instructions[] = {
             //     .wrap_target
-    0x4010, //  0: in     pins, 16
-    0xa026, //  1: mov    x, isr
-    0x00a4, //  2: jmp    x != y, 4
-    0xc000, //  3: irq    nowait 0
+    0x80a0, //  0: pull   block
+    0xa027, //  1: mov    x, osr
+    0xa0c1, //  2: mov    isr, x
+    0x8020, //  3: push   block
     0x0000, //  4: jmp    0
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
-static const struct pio_program iohost_read_program = {
-    .instructions = iohost_read_program_instructions,
+static const struct pio_program fifo_echo_program = {
+    .instructions = fifo_echo_program_instructions,
     .length = 5,
     .origin = -1,
-    .pio_version = iohost_read_pio_version,
+    .pio_version = fifo_echo_pio_version,
 #if PICO_PIO_VERSION > 0
     .used_gpio_ranges = 0x0
 #endif
 };
 
-static inline pio_sm_config iohost_read_program_get_default_config(uint offset) {
+static inline pio_sm_config fifo_echo_program_get_default_config(uint offset) {
     pio_sm_config c = pio_get_default_sm_config();
-    sm_config_set_wrap(&c, offset + iohost_read_wrap_target, offset + iohost_read_wrap);
+    sm_config_set_wrap(&c, offset + fifo_echo_wrap_target, offset + fifo_echo_wrap);
     return c;
 }
+#endif
 
-uint iohost_read_program_init(
-    PIO pio,
-    uint sm,
-    uint offset,
-    uint first_pin,
-    uint pattern
-) {
-    // Configure 16 pins as inputs
-    for (int i = 0; i < 16; i++)
-        pio_gpio_init(pio, first_pin + i);
-    pio_sm_set_consecutive_pindirs(pio, sm, first_pin, 16, false);
-    // Configure shift registers
+// --------- //
+// read_pins //
+// --------- //
+
+#define read_pins_wrap_target 0
+#define read_pins_wrap 2
+#define read_pins_pio_version 1
+
+static const uint16_t read_pins_program_instructions[] = {
+            //     .wrap_target
+    0x4010, //  0: in     pins, 16
+    0x8020, //  1: push   block
+    0x0000, //  2: jmp    0
+            //     .wrap
+};
+
+#if !PICO_NO_HARDWARE
+static const struct pio_program read_pins_program = {
+    .instructions = read_pins_program_instructions,
+    .length = 3,
+    .origin = -1,
+    .pio_version = read_pins_pio_version,
+#if PICO_PIO_VERSION > 0
+    .used_gpio_ranges = 0x0
+#endif
+};
+
+static inline pio_sm_config read_pins_program_get_default_config(uint offset) {
     pio_sm_config c = pio_get_default_sm_config();
-    sm_config_set_in_pins(&c, first_pin);
-    sm_config_set_in_shift(&c, true, true, 16);  // shift right, autopush, 16
-    // Load program
-    pio_sm_init(pio, sm, offset, &c);
-    // Push pattern into OSR
-    pio_sm_put_blocking(pio, sm, pattern);
-    // Enable IRQ0 from this PIO
-    pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
-    // Start state machine
-    pio_sm_set_enabled(pio, sm, true);
-    return offset;
+    sm_config_set_wrap(&c, offset + read_pins_wrap_target, offset + read_pins_wrap);
+    return c;
 }
+#endif
 
+// ------------- //
+// push_on_match //
+// ------------- //
+
+#define push_on_match_wrap_target 0
+#define push_on_match_wrap 6
+#define push_on_match_pio_version 1
+
+static const uint16_t push_on_match_program_instructions[] = {
+            //     .wrap_target
+    0x80a0, //  0: pull   block
+    0xa027, //  1: mov    x, osr
+    0x4010, //  2: in     pins, 16
+    0xa046, //  3: mov    y, isr
+    0x00a2, //  4: jmp    x != y, 2
+    0x8020, //  5: push   block
+    0x0002, //  6: jmp    2
+            //     .wrap
+};
+
+#if !PICO_NO_HARDWARE
+static const struct pio_program push_on_match_program = {
+    .instructions = push_on_match_program_instructions,
+    .length = 7,
+    .origin = -1,
+    .pio_version = push_on_match_pio_version,
+#if PICO_PIO_VERSION > 0
+    .used_gpio_ranges = 0x0
+#endif
+};
+
+static inline pio_sm_config push_on_match_program_get_default_config(uint offset) {
+    pio_sm_config c = pio_get_default_sm_config();
+    sm_config_set_wrap(&c, offset + push_on_match_wrap_target, offset + push_on_match_wrap);
+    return c;
+}
+#endif
+
+// ------------ //
+// irq_on_match //
+// ------------ //
+
+#define irq_on_match_wrap_target 0
+#define irq_on_match_wrap 7
+#define irq_on_match_pio_version 1
+
+static const uint16_t irq_on_match_program_instructions[] = {
+            //     .wrap_target
+    0x80a0, //  0: pull   block
+    0xa027, //  1: mov    x, osr
+    0x4010, //  2: in     pins, 16
+    0xa046, //  3: mov    y, isr
+    0x00a2, //  4: jmp    x != y, 2
+    0x8020, //  5: push   block
+    0xc000, //  6: irq    nowait 0
+    0x0002, //  7: jmp    2
+            //     .wrap
+};
+
+#if !PICO_NO_HARDWARE
+static const struct pio_program irq_on_match_program = {
+    .instructions = irq_on_match_program_instructions,
+    .length = 8,
+    .origin = -1,
+    .pio_version = irq_on_match_pio_version,
+#if PICO_PIO_VERSION > 0
+    .used_gpio_ranges = 0x0
+#endif
+};
+
+static inline pio_sm_config irq_on_match_program_get_default_config(uint offset) {
+    pio_sm_config c = pio_get_default_sm_config();
+    sm_config_set_wrap(&c, offset + irq_on_match_wrap_target, offset + irq_on_match_wrap);
+    return c;
+}
+#endif
+
+// ------- //
+// another //
+// ------- //
+
+#define another_wrap_target 0
+#define another_wrap 1
+#define another_pio_version 1
+
+static const uint16_t another_program_instructions[] = {
+            //     .wrap_target
+    0x80a0, //  0: pull   block
+    0x0000, //  1: jmp    0
+            //     .wrap
+};
+
+#if !PICO_NO_HARDWARE
+static const struct pio_program another_program = {
+    .instructions = another_program_instructions,
+    .length = 2,
+    .origin = -1,
+    .pio_version = another_pio_version,
+#if PICO_PIO_VERSION > 0
+    .used_gpio_ranges = 0x0
+#endif
+};
+
+static inline pio_sm_config another_program_get_default_config(uint offset) {
+    pio_sm_config c = pio_get_default_sm_config();
+    sm_config_set_wrap(&c, offset + another_wrap_target, offset + another_wrap);
+    return c;
+}
 #endif
 

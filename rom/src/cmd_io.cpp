@@ -575,8 +575,8 @@ namespace cmd_io
         {
             VERBOSE("Checking addr %04x against %04x, PIN_SYNC %u", addr, *iter, pin_sync);
 //            log_queue.push_back(buffer);
-            if ((addr == *iter) && pin_sync)
-//            if ((addr == *iter))
+//            if ((addr == *iter) && pin_sync)
+            if ((addr == *iter))
             {
                 set_clock_frequency(0.0);
                 if (useJSONIO)

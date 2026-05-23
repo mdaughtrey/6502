@@ -38,6 +38,7 @@ extern Command commands_io[];
 extern Command commands_rom_ram[];
 extern Command commands_via6522[];
 extern Command commands_debugger[];
+extern Command commands_iohost[];
 Command * command_set = commands_top;
 Command * current_command = NULL;
 // std::string accumulator = "";
@@ -46,6 +47,8 @@ Command commands_top[] = {
 {'h', "help", Validator(""),cmd_help },
 {'d', "Debugger Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_debugger; return false; }},
 {'i', "I/O Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_io; return false; }},
+{'p', "PIO Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_iohost; return false; }},
+
 {'r', "ROM/RAM Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_rom_ram; return false; }},
 {'v', "VIA 6522 Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_via6522; return false; }},
 {0x01, "", Validator(""), [](CommandInput input)->bool{ return false; } }
@@ -71,7 +74,6 @@ Command commands_io[] = {
 },
 {'e', "Bus Enable", Validator(""), cmd_io::cmd_bus_active },
 {'E', "Bus Disable", Validator(""), cmd_io::cmd_bus_inactive },
-{'f', "Read RxFIFO", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_read_rx_fifo(); return false; }},
 {'h', "help", Validator(""), cmd_help },
 {
     'I', "I/O Value",
@@ -98,9 +100,6 @@ Command commands_io[] = {
 },
 {'o', "Toggle Pin 10hz (NN)", Validator("([0-9]{2})", "Pin Number (NN)"), cmd_io::cmd_toggle_pin_10hz },
 //{'T', "Test I/O Pins", Validator(""), cmd_io::cmd_test_io_pins },
-{'q', "Enable IOHost IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_set_isr(true); return false; }},
-{'Q', "Disable IOHost IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_set_isr(false); return false; }},
-{'T', "Init IOHost IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_init_irq(); return false; }},
 {'t', "Clear Clocked Tasks", Validator(""), cmd_io::cmd_clear_clocked_tasks },
 {'v', "Verbose logging", Validator(""), [](CommandInput) -> bool { cmd_io::cmd_verbose_logging(true); return false; }},
 {'V', "Terse logging", Validator(""), [](CommandInput) ->bool { cmd_io::cmd_verbose_logging(false); return false; }},
@@ -155,6 +154,21 @@ Command commands_debugger[] = {
     {'p', "pin status", Validator(""), cmd_io::cmd_pin_status},
     {'s', "step", Validator(""), cmd_io::cmd_step_clock},
     {'u', "upload rom", Validator(""), cmd_io::cmd_upload_rom_image},
+    {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
+    {0x01, "", Validator(""), [](CommandInput input)->bool{ return false; } }
+};
+
+Command commands_iohost[] = {
+    {'h', "help", Validator(""),cmd_help },
+    {'l', "List PIO Programs", Validator(""), iohost_read::cmd_list_programs},
+    {'L', "Load PIO", Validator("(\\w+)","Program Name: "), iohost_read::cmd_load_pio},
+    {'p', "Push value to TX FIFO", Validator("[0-9a-fA-F]{8}", "HHHHHHHH"), iohost_read::cmd_push_to_fifo},
+    {'q', "Enable IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_set_isr(true); return false; }},
+    {'Q', "Disable IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_set_isr(false); return false; }},
+    {'r', "Read from RX FIFO", Validator(), iohost_read::cmd_read_from_fifo},
+    {'R', "Reset PIO", Validator(), iohost_read::cmd_reset_pio},
+    {'s', "Set IN Shift Direction (l/r)", Validator("[lr]", "l | r"), iohost_read::cmd_set_in_shift},
+    {'S', "Set OUT Shift Direction (l/r)", Validator("[lr]", "l | r"), iohost_read::cmd_set_out_shift},
     {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
     {0x01, "", Validator(""), [](CommandInput input)->bool{ return false; } }
 };

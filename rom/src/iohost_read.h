@@ -8,8 +8,13 @@ namespace iohost_read
     void init();
     void loop();
     void cmd_set_isr(bool);
-    void cmd_init_irq(void);
-    void cmd_read_rx_fifo(void);
+    bool cmd_load_pio(CommandInput);
+    bool cmd_push_to_fifo(CommandInput);
+    bool cmd_read_from_fifo(CommandInput);
+    bool cmd_reset_pio(CommandInput);
+    bool cmd_set_out_shift(CommandInput);
+    bool cmd_set_in_shift(CommandInput);
+    bool cmd_list_programs(CommandInput);
 }
 
 

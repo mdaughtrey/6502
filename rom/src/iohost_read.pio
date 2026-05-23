@@ -1,42 +1,42 @@
-.program iohost_read
+.program fifo_echo
 
-pull block          ; FIFO -> OSR (match pattern)
-mov y, osr			; osr -> y  
 loop:
-	in pins, 16	    ; pins -> isr, autopush to rx fifo
-	mov x, isr		; isr -> x
-	jmp x!=y, loop  ; loop if no pattern match
-	push block 		; else push match to fifo
-    irq wait 0      ; and signal ISR, wait unti it's cleared
-	jmp loop
+pull block          ; FIFO -> OSR (match pattern)
+mov x, osr
+mov isr, x
+push block
+jmp loop
 
-% c-sdk {
-uint iohost_read_program_init(
-    PIO pio,
-    uint sm,
-    uint offset,
-    uint first_pin,
-    uint pattern
-) {
-    int rc;
-    // Configure shift registers
-    pio_sm_config c = pio_get_default_sm_config();
-    sm_config_set_in_pins(&c, first_pin);
-    sm_config_set_out_shift(&c, true, false, 32);  // shift right, no autopull, 32
-    sm_config_set_in_shift(&c, false, false, 32);  // shift left, no autopush, 16
+.program read_pins
+loop:
+    in pins, 16     ; isr <- pins, no autopush to rx fifo
+    push block      ; rxfifo <- isr
+    jmp loop
 
-    // Load program
-    rc = pio_sm_init(pio, sm, offset, &c);
-    if (0 != rc)
-    {
-        std::cout << "pio_sm_init " << rc << std::endl;
-    }
-    // Push pattern into OSR
-    pio_sm_put_blocking(pio, sm, pattern);
-    pio_interrupt_clear(pio, 0);
-    pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
-    return offset;
-}
 
-%}
+.program push_on_match
+pull block
+mov x, osr
+loop:
+    in pins, 16     ; isr <- pins, no autopush to rx fifo
+    mov y, isr      ; y <- isr
+    jmp x!=y, loop
+    push block      ; rxfifo <- isr
+    jmp loop
 
+.program irq_on_match
+pull block
+mov x, osr
+loop:
+    in pins, 16     ; isr <- pins, no autopush to rx fifo
+    mov y, isr      ; y <- isr
+    jmp x!=y, loop
+    push block      ; rxfifo <- isr
+    irq 0
+    jmp loop
+
+
+.program another
+loop:
+pull block          ; FIFO -> OSR (match pattern)
+jmp loop
