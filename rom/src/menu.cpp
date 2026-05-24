@@ -162,7 +162,7 @@ Command commands_iohost[] = {
     {'h', "help", Validator(""),cmd_help },
     {'l', "List PIO Programs", Validator(""), iohost_read::cmd_list_programs},
     {'L', "Load PIO", Validator("(\\w+)","Program Name: "), iohost_read::cmd_load_pio},
-    {'p', "Push value to TX FIFO", Validator("[0-9a-fA-F]{8}", "HHHHHHHH"), iohost_read::cmd_push_to_fifo},
+    {'p', "Push value to TX FIFO", Validator("[0-9a-fA-F]{4}", "HHHH"), iohost_read::cmd_push_to_fifo},
     {'q', "Enable IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_set_isr(true); return false; }},
     {'Q', "Disable IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_set_isr(false); return false; }},
     {'r', "Read from RX FIFO", Validator(), iohost_read::cmd_read_from_fifo},

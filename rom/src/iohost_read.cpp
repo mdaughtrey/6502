@@ -18,24 +18,33 @@ namespace iohost_read
     ProgramMap programs = {
         {"fifo_echo", Program(&fifo_echo_program, fifo_echo_program_get_default_config)},
         {"push_on_match", Program(&push_on_match_program, push_on_match_program_get_default_config)},
+//        {"irq_on_match", Program(&irq_on_match_program, irq_on_match_program_get_default_config)},
         {"read_pins", Program(&read_pins_program, read_pins_program_get_default_config)},
-//        {"another", &another_program}
+        {"irq_on_match_sync", Program(&irq_on_match_sync_program, irq_on_match_sync_program_get_default_config)}
     };
     volatile bool isr = false;
     volatile uint16_t last_isr_value = 0;
     volatile uint16_t last_fifo_value = 0;
     PIO pio = pio0;
     pio_sm_config smc;
+    const pio_program_t * current_program = NULL;
     uint offset;
+    int isr_dropdead;
     int sm = 0;
     bool inShiftRight = false;
     bool outShiftRight = false;
+
     void iohost_read_isr()
     {
         isr = true;
+        std::cout << "ISR Triggered" << std::endl;
 //        uint16_t value = pio_sm_get_blocking(pio0, 0);
-//        std::cout << "ISR Value: " << std::hex << value << std::endl;
-//        irq_set_enabled(PIO0_IRQ_0, false);
+//        std::cout << "ISR Drop Dead: " << isr_dropdead << " Value: " << std::hex << value << std::endl;
+//        if (!--isr_dropdead)
+//        {
+//            std::cout << "ISR Drop Dead" << std::endl;
+//            irq_set_enabled(PIO0_IRQ_0, false);
+//        }
         pio_interrupt_clear(pio0, 0);
     }
 
@@ -59,18 +68,23 @@ namespace iohost_read
         {
             return true;
         }
-        bool found = false;
+        if (current_program)
+        {
+           pio_remove_program(pio, current_program, offset);
+           current_program = NULL;
+        }
+        pio_sm_drain_tx_fifo(pio, sm);
         ProgramMapIterator iter = programs.begin();
         for (; iter != programs.end(); iter++)
         {
             if (input[0] == iter->first)
             {
                 offset = pio_add_program(pio, iter->second.first);
-                found = true;
+                current_program = iter->second.first;
                 break;
             }
         }
-        if (!found)
+        if (!current_program)
         {
             std::cout << "Program not found" << std::endl;
             return false;
@@ -83,15 +97,15 @@ namespace iohost_read
         // smc = iohost_read_program_get_default_config(offset);
         smc = iter->second.second(offset);
         sm_config_set_in_pins(&smc, 0);
-//        sm_config_set_in_pin_count(&smc, 16);
+        sm_config_set_in_pin_count(&smc, 16);
         std::cout << "outShiftRight " << outShiftRight << " inShiftRight " << inShiftRight << std::endl;
-        sm_config_set_out_shift(&smc, outShiftRight, false, 32);
-        sm_config_set_in_shift(&smc, inShiftRight, false, 32);
+        sm_config_set_out_shift(&smc, outShiftRight, false, 16);    // autopull disabled
+        sm_config_set_in_shift(&smc, inShiftRight, false, 16);      // autopush disabled
         pio_sm_init(pio, sm, offset, &smc);
         // Push pattern into OSR
-//        irq_set_exclusive_handler(PIO0_IRQ_0, iohost_read_isr);
+        irq_set_exclusive_handler(PIO0_IRQ_0, iohost_read_isr);
         pio_sm_set_enabled(pio, sm, true);
-//        pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
+        pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
         return false;
     }
 
@@ -100,6 +114,7 @@ namespace iohost_read
 		std::cout << "set ISR " << set << std::endl;
         if (set)
         {
+            isr_dropdead = 10;
             pio_interrupt_clear(pio0, 0);
         }
         irq_set_enabled(PIO0_IRQ_0, set);
@@ -131,8 +146,9 @@ namespace iohost_read
             return true;
         }
         uint16_t value = std::stoi(input[0], nullptr, 16);
-        std::cout << "FIFO Push " << std::hex << std::setw(4) << std::setfill('0') << value << std::endl;
+        std::cout << "FIFO Pushing " << std::hex << std::setw(4) << std::setfill('0') << value << std::endl;
         pio_sm_put_blocking(pio, sm, value);
+        std::cout << "Pushed" << std::endl;
         return false;
     }
 
@@ -167,10 +183,9 @@ namespace iohost_read
 
     void loop()
     {
-
         if (isr)
         {
-            std::cout << "ISR Triggered" << std::endl;
+            std::cout << "ISR Loop" << std::endl;
             isr = false;
         }
 

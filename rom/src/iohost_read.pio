@@ -15,28 +15,53 @@ loop:
 
 
 .program push_on_match
-pull block
-mov x, osr
 loop:
+    pull block
+    mov x, osr
+    mov isr, null
     in pins, 16     ; isr <- pins, no autopush to rx fifo
     mov y, isr      ; y <- isr
     jmp x!=y, loop
     push block      ; rxfifo <- isr
     jmp loop
 
-.program irq_on_match
-pull block
-mov x, osr
+// .program irq_on_match
+// pull block
+// mov x, osr
+// loop:
+//     mov isr, null
+//     in pins, 16     ; isr <- pins, no autopush to rx fifo
+//     mov y, isr      ; y <- isr
+//     jmp x!=y, loop
+//     push block      ; rxfifo <- isr
+//     irq 0
+//     jmp loop
+
+.program irq_on_match_sync0
 loop:
+    pull block      ; wait for match data
+    mov x, osr      ; x <- OSR
+    mov isr, null   ; ISR <- 0
     in pins, 16     ; isr <- pins, no autopush to rx fifo
     mov y, isr      ; y <- isr
-    jmp x!=y, loop
-    push block      ; rxfifo <- isr
-    irq 0
-    jmp loop
+    jmp x!=y, loop  ; loop while no match
+    irq nowait 0      ; wait for interrupt completion
+loop2:
+    mov isr, null   ; ISR <- 0
+    in pins, 16     ; isr <- pins, no autopush to rx fifo
+    mov y, isr      ; y <- isr
+    jmp x!=y, loop  ; loop while match
+    jmp loop2
 
-
-.program another
-loop:
-pull block          ; FIFO -> OSR (match pattern)
-jmp loop
+.program irq_on_match_sync
+load_match:
+    pull block      ; wait for match data
+    mov x, osr      ; x <- OSR
+wait_for_match:
+    mov y, pins     ; load pins
+    jmp x!=y, wait_for_match  ; loop while no match
+    irq nowait 0      ; wait for interrupt completion
+hold_while_match:
+    mov y, pins
+    jmp x!=y, wait_for_match  ; loop while match
+    jmp hold_while_match
