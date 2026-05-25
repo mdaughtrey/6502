@@ -2,21 +2,21 @@
 
 .SEGMENT "IOHOST"
 LIO_SIGNALS: .byte 0        ; Local I/O signals
-HIO_SIGNALS: .byte 0        ; Host I/O signals
 ; STATUS_BITS for use in the SIGNAL regs
 TOHOST_READY = %10000000
 ; TX_READY = %01000000
 ; RX_DATA_MASK = %01111111
 ; TX_DATA_MASK = %10111111
+LIO_HEAD: .byte 0       ; Local I/O buffer head index
+LIO_TAIL: .byte 0       ; Local I/O buffer tail index
+HIO_SIGNALS: .byte 0        ; Host I/O signals
+HIO_HEAD: .byte 0       ; Host I/O buffer head index
+HIO_TAIL: .byte 0       ; Host I/O buffer tail index
 
 LIO_BUFFER: .res 8     ; Local I/O buffer, for data to the host
 HIO_BUFFER: .res 8    ; Host I/O buffer, for data from the host
 BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
 
-LIO_HEAD: .byte 0       ; Local I/O buffer head index
-LIO_TAIL: .byte 0       ; Local I/O buffer tail index
-HIO_HEAD: .byte 0       ; Host I/O buffer head index
-HIO_TAIL: .byte 0       ; Host I/O buffer tail index
 
 .SEGMENT "CODE"
 

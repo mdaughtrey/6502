@@ -254,8 +254,17 @@ namespace rom_ram
 
     void write_to_memory(uint8_t * data, uint32_t length, uint16_t target_address)
     {
+        bool be_low = false;
+        if (!gpioc_hilo_in_get() & cmd_io::BE_MASK)
+        {
+            be_low = true;
+        }
+
+        if (!be_low)
+        {
+            gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+        }
         uint64_t mask = cmd_io::ADDR_MASK | cmd_io::DATA_MASK | cmd_io::RW_MASK;
-        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         gpio_set_dir_masked64(mask, mask);
         for (auto ii = 0; ii < length; ii++)
         {
@@ -268,7 +277,10 @@ namespace rom_ram
             sleep_us(1);
         }
         gpio_set_dir_masked64(mask, 0);
-        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+        if (!be_low)
+        {
+            gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+        }
     }
 
     bool cmd_upload_rom_image(CommandInput input = CommandInput())

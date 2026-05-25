@@ -81,7 +81,9 @@ namespace cmd_io
         // Set pullup on READY
         gpio_pull_up(PIN_IRQ);
         gpio_pull_up(PIN_NMI);
-        gpio_pull_up(PIN_READY);
+
+        gpio_set_dir(PIN_READY, GPIO_OUT);
+        gpio_put(PIN_READY, 1);
 
         uint64_t mask = RESET_MASK | CLOCK_MASK | PHI0_MASK | BE_MASK | NMI_MASK;
         VERBOSE("cmd_init_buses: Pin initialization mask is %s", std::bitset<64>(mask).to_string().c_str());

@@ -174,7 +174,7 @@ static const uint16_t irq_on_match_sync_program_instructions[] = {
     0xa027, //  1: mov    x, osr
     0xa040, //  2: mov    y, pins
     0x00a2, //  3: jmp    x != y, 2
-    0xc000, //  4: irq    nowait 0
+    0xc020, //  4: irq    wait 0
     0xa040, //  5: mov    y, pins
     0x00a2, //  6: jmp    x != y, 2
     0x0005, //  7: jmp    5

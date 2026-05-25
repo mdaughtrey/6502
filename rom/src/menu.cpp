@@ -160,6 +160,7 @@ Command commands_debugger[] = {
 
 Command commands_iohost[] = {
     {'h', "help", Validator(""),cmd_help },
+    {'i', "Initialize test", Validator(""), iohost_read::cmd_initialize_test},
     {'l', "List PIO Programs", Validator(""), iohost_read::cmd_list_programs},
     {'L', "Load PIO", Validator("(\\w+)","Program Name: "), iohost_read::cmd_load_pio},
     {'p', "Push value to TX FIFO", Validator("[0-9a-fA-F]{4}", "HHHH"), iohost_read::cmd_push_to_fifo},
