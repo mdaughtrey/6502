@@ -1,0 +1,12 @@
+.program break
+load_match:
+    pull block      ; wait for match data
+    mov x, osr      ; x <- OSR
+wait_for_match:
+    mov y, pins     ; load pins
+    jmp x!=y, wait_for_match  ; loop while no match
+    irq wait 0      ; wait for interrupt completion
+hold_while_match:
+    mov y, pins
+    jmp x!=y, wait_for_match  ; loop while match
+    jmp hold_while_match
