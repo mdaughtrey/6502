@@ -10,6 +10,7 @@
 #include "validator.h"
 #include "via6522.h"
 #include "iohost_read.h"
+#include "pio_break.h"
 // #include "debugger.h"
 
 namespace menu
@@ -44,7 +45,7 @@ Command * current_command = NULL;
 // std::string accumulator = "";
 
 Command commands_top[] = {
-{'h', "help", Validator(""),cmd_help },
+{'?', "help", Validator(""),cmd_help },
 {'d', "Debugger Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_debugger; return false; }},
 {'i', "I/O Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_io; return false; }},
 {'p', "PIO Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_iohost; return false; }},
@@ -74,12 +75,14 @@ Command commands_io[] = {
 },
 {'e', "Bus Enable", Validator(""), cmd_io::cmd_bus_active },
 {'E', "Bus Disable", Validator(""), cmd_io::cmd_bus_inactive },
-{'h', "help", Validator(""), cmd_help },
+{'?', "help", Validator(""), cmd_help },
 {
     'I', "I/O Value",
     Validator("([io])(\\d\\d)([01])", "[io]Pin[01] (i|o)NN(1|0)"),
     cmd_io::cmd_io 
 },
+{'h', "Hard Breakpoint", Validator("([0-9a-fA-F]{4})","hhhh"), pio_break::set },
+{'H', "Clear Hard Breakpoint", Validator("([0-9a-fA-F]{4})","hhhh"), pio_break::clear },
 {'i', "Step Instruction", Validator(""), cmd_io::cmd_step_instruction },
 {'j', "JSON Output", Validator(""), [](CommandInput) -> bool { return cmd_io::cmd_use_json(true); } },
 {'J', "Text Output", Validator(""), [](CommandInput) -> bool { return cmd_io::cmd_use_json(false); } },
@@ -116,7 +119,7 @@ Command commands_rom_ram[] = {
     Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})", "Enter addr/length (XXXX/XXXX)"),
     rom_ram::cmd_dump_memory
 },
-{'h', "help", Validator(""), cmd_help },
+{'?', "help", Validator(""), cmd_help },
 {'i', "Upload ROM Image", Validator(""), rom_ram::cmd_upload_rom_image },
 {'l', "List Programs", Validator(""), rom_ram::cmd_list_programs },
 // {'u', "Upload ROM", hex_validator, rom_ram::cmd_upload_rom },
@@ -134,7 +137,7 @@ Command commands_rom_ram[] = {
 Command commands_via6522[] = {
     {'b', "Set I/O Base", Validator("([0-9A-Fa-f]{4})", "Enter I/O Base (XXXX)"), via6522::cmd_set_io_base },
     {'d', "Dump registers", Validator(""), via6522::cmd_dump_registers },
-    {'h', "help", Validator(""), cmd_help },
+    {'?', "help", Validator(""), cmd_help },
     {'r', "Set Register", Validator("([0-9a-fA-F]{2})/([0-0a-fA-F][2})", "Register/Value (XX/XX)"), via6522::cmd_set_register },
     {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
     {0x01, "", Validator(""), [](CommandInput input)->bool { return false;} }
@@ -147,7 +150,7 @@ Command commands_debugger[] = {
     {'c', "Set Clock Frequency", Validator("(\\d+)"), cmd_io::cmd_set_clock_frequency },
     {'C', "Stop Clock", Validator(""), cmd_io::cmd_clock_stop },
     {'d', "dump memory (XXXX/XXXX)", Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})"), cmd_io::cmd_dump_memory},
-    {'h', "help", Validator(""),cmd_help },
+    {'?', "help", Validator(""),cmd_help },
     {'I', "initialize debug session", Validator(""), cmd_io::cmd_initialize_debug_session},
     {'i', "Step Instruction", Validator(""), cmd_io::cmd_step_instruction },
 //    {'r', "run", Validator(""), cmd_io::cmd_run},
@@ -159,7 +162,7 @@ Command commands_debugger[] = {
 };
 
 Command commands_iohost[] = {
-    {'h', "help", Validator(""),cmd_help },
+    {'?', "help", Validator(""),cmd_help },
     {'i', "Initialize test", Validator(""), iohost_read::cmd_initialize_test},
     {'l', "List PIO Programs", Validator(""), iohost_read::cmd_list_programs},
     {'L', "Load PIO", Validator("(\\w+)","Program Name: "), iohost_read::cmd_load_pio},

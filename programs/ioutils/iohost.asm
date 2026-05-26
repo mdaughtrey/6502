@@ -7,11 +7,11 @@ TOHOST_READY = %10000000
 ; TX_READY = %01000000
 ; RX_DATA_MASK = %01111111
 ; TX_DATA_MASK = %10111111
-LIO_HEAD: .byte 0       ; Local I/O buffer head index
 LIO_TAIL: .byte 0       ; Local I/O buffer tail index
+LIO_HEAD: .byte 0       ; Local I/O buffer head index
 HIO_SIGNALS: .byte 0        ; Host I/O signals
-HIO_HEAD: .byte 0       ; Host I/O buffer head index
 HIO_TAIL: .byte 0       ; Host I/O buffer tail index
+HIO_HEAD: .byte 0       ; Host I/O buffer head index
 
 LIO_BUFFER: .res 8     ; Local I/O buffer, for data to the host
 HIO_BUFFER: .res 8    ; Host I/O buffer, for data from the host

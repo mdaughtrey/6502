@@ -8,10 +8,12 @@
 #include <via6522.h>
 #include <menu.h>
 #include <iohost_read.h>
+#include <log_queue.h>
 
 int main()
 {
     stdio_init_all();
+    log_queue::init();
     cmd_io::init();
     rom_ram::init();
     via6522::init();
@@ -26,6 +28,7 @@ int main()
         cmd_io::loop();
         via6522::loop();
         iohost_read::loop();
+        log_queue::loop();
     }
     return 0;
 }

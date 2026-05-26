@@ -5,7 +5,8 @@ project(rom)
 pico_sdk_init()
 
 set (SOURCES src/rom.cpp src/menu.cpp src/cmd_io.cpp src/rom_ram.cpp
-    src/via6522.cpp src/debugger.cpp src/bus_asserts.cpp src/iohost_read.cpp)
+    src/via6522.cpp src/debugger.cpp src/bus_asserts.cpp src/iohost_read.cpp
+    src/pio_break.cpp src/log_queue.cpp)
 # set (HEADER_FILES src/comm.h)
 add_executable(rom ${SOURCES})
 #pico_add_extra_outputs(rom)
@@ -21,8 +22,8 @@ add_executable(rom ${SOURCES})
 #)
 #target_sources(rom PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/asm_main.o)
 
-pico_generate_pio_header(rom /Users/mattd/dev/6502/rom/src/iohost_read.pio
-    OUTPUT_DIR src/)
+pico_generate_pio_header(rom /Users/mattd/dev/6502/rom/src/iohost_read.pio OUTPUT_DIR src/)
+pico_generate_pio_header(rom /Users/mattd/dev/6502/rom/src/pio_break.pio OUTPUT_DIR src/)
 
 target_include_directories(rom PUBLIC src/)
 pico_enable_stdio_usb(rom 1)

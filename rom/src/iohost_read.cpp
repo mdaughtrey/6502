@@ -9,7 +9,6 @@
 #include <iohost_read.pio.h>
 #include <pin_defs.h>
 #include <rom_ram_internal.h>
-//extern const pio_program_t iohost_read_program;
 
 namespace iohost_read
 {
@@ -20,7 +19,6 @@ namespace iohost_read
     ProgramMap programs = {
         {"fifo_echo", Program(&fifo_echo_program, fifo_echo_program_get_default_config)},
         {"push_on_match", Program(&push_on_match_program, push_on_match_program_get_default_config)},
-//        {"irq_on_match", Program(&irq_on_match_program, irq_on_match_program_get_default_config)},
         {"read_pins", Program(&read_pins_program, read_pins_program_get_default_config)},
         {"irq_on_match_sync", Program(&irq_on_match_sync_program, irq_on_match_sync_program_get_default_config)}
     };
@@ -38,37 +36,7 @@ namespace iohost_read
 
     void iohost_read_isr()
     {
-//        uint8_t memory_map[10];
         isr = true;
-//        std::cout << "ISR Triggered" << std::endl;
-//        gpio_put(PIN_READY, 0);
-//
-//        
-//        std::cout << "Reading memory" << std::endl;
-//        std::vector<uint8_t> buffers = rom_ram::read_memory(0x0300, 16);
-//        std::cout << "Done" << std::endl;
-//
-//        gpio_put(PIN_READY, 1);
-
-//        for (auto iter : buffers)
-//        {
-//            std::cout << std::hex << std::setw(2) << std::setfill('0') << (uint8_t)iter << " ";
-//        }
-//        std::cout << std::endl;
-
-
-        // Assert address 0x0300 - 0x030f
-        // Read data
-        // Assert bus enable
-        // Deassert sync (?)
-        // Deassert address 0x0300 - 0x030f
-//        uint16_t value = pio_sm_get_blocking(pio0, 0);
-//        std::cout << "ISR Drop Dead: " << isr_dropdead << " Value: " << std::hex << value << std::endl;
-//        if (!--isr_dropdead)
-//        {
-//            std::cout << "ISR Drop Dead" << std::endl;
-//            irq_set_enabled(PIO0_IRQ_0, false);
-//        }
         pio_sm_set_enabled(pio, sm, false);
         pio_interrupt_clear(pio0, 0);
     }
@@ -122,8 +90,6 @@ namespace iohost_read
             std::cout << "Program not found" << std::endl;
             return false;
         }
-//        pio_set_gpio_base(pio, 0);
-//        offset = pio_add_program(pio, &iohost_read_program);
         std::cout << "IOHost offset " << offset << std::endl;
         sm = pio_claim_unused_sm(pio, true);
 
@@ -160,12 +126,6 @@ namespace iohost_read
     	while ((!pio_sm_is_rx_fifo_empty(pio0, 0)) && count--) 
     	{
     		uint32_t raw = pio_sm_get(pio0, 0);
-//    		uint16_t value = raw & 0xFFFF;
-
-    		// First FIFO entry = autopush
-    		// Second FIFO entry = manual push
-//    		last_fifo_value = value;
-
     		std::cout << "0x" << std::hex << std::setw(8) << std::setfill('0') << raw << " " << std::endl;
     	}
 		std::cout << "Done" << std::endl;
@@ -199,7 +159,6 @@ namespace iohost_read
             return true;
         }
         outShiftRight = ('r' == input[0][0] ? true : false);
-//        sm_config_set_out_shift(&smc, ('r' == input[0][0] ? true : false), false,  16);
         return false;
     }
 
@@ -210,18 +169,17 @@ namespace iohost_read
             return true;
         }
         inShiftRight = ('r' == input[0][0] ? true : false);
-        //sm_config_set_in_shift(&smc, ('r' == input[0][0] ? true : false), false,  16);
         return false;
     }
 
     typedef enum 
     {
         LIO_SIGNALS = 0,
-        LIO_HEAD,
         LIO_TAIL,
+        LIO_HEAD,
         HIO_SIGNALS,
-        HIO_HEAD,
         HIO_TAIL,
+        HIO_HEAD,
         LIO_DATA,
         HIO_DATA = LIO_DATA + 8,
         BUFFERS_LENGTH = HIO_DATA + 8,
@@ -237,6 +195,7 @@ namespace iohost_read
             std::cout << "ISR Loop" << std::endl;
             std::cout << "Reading Buffers" << std::endl;
             gpio_put(PIN_READY, 0);
+            sleep_us(100);
             std::vector<uint8_t> buffers = rom_ram::read_memory(BUFFERS_BASE, BUFFERS_LENGTH);
             for (auto iter : buffers)
             {
@@ -267,12 +226,12 @@ namespace iohost_read
                 tail++;
                 tail &= 7;
             }
-            gpio_put(PIN_READY, 0);
             buffers[LIO_SIGNALS] &= ~0x80;
-            buffers[LIO_HEAD] = head;
+            buffers[LIO_TAIL] = tail;
             // Write back signals and head
             std::cout << "Writing back" << std::endl;
             gpio_put(PIN_READY, 0);
+            sleep_us(100);
             rom_ram::write_to_memory(&buffers[LIO_SIGNALS], 2, BUFFERS_BASE + LIO_SIGNALS);
             gpio_put(PIN_READY, 1);
             std::cout << "Writing back Done" << std::endl;

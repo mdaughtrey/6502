@@ -30,7 +30,8 @@ mc: compile  	# mount and copy
 	sudo cp ${UF2} ${MOUNT}
 #	sudo umount ${MOUNT}
 	sleep 3
-	screen ${PORT} 460800
+	-rm screenlog.0
+	screen -L "${PORT}" 460800 
 	reset
 	stty sane
 	
@@ -38,8 +39,12 @@ mc: compile  	# mount and copy
 upload: 
 	${ACLI} upload  -b ${PLATFORM} -p ${PORT} -i  ${UF2}
 
+sl: 
+	-rm screenlog.0
+	screen -L "${PORT}" 460800 
+
 s: 
-	screen ${PORT} 460800
+	screen "${PORT}" 460800 
 	# screen ${PORT} 115200
 
 # openocd -s /usr/share/openocd/ -f scripts/interface/cmsis-dap.cfg -f target/rp2040.cfg -c "adapter speed 100"

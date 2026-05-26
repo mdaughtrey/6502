@@ -6,10 +6,10 @@
 namespace pio_break
 {
     void init();
-    bool set(uint16_t address);
-    bool clear(uint16_t address);
-    bool disable(uint16_t address);
-    bool enable(uint16_t address);
+    bool set(CommandInput);
+    bool clear(CommandInput);
+    bool disable(CommandInput);
+    bool enable(CommandInput);
 }
 
 

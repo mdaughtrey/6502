@@ -21,8 +21,8 @@
 #include "rom_ram.h"
 #include "rom_ram_internal.h"
 #include "pin_defs.h"
-#include "common_defs.h"
 #include "bus_asserts.h"
+#include "log_queue.h"
 
 // `rom1_bin` and `rom1_bin_len` are defined in `src/ioutils.h` (binary data).
 // Declare them `extern` here instead of including the header to avoid multiple
@@ -44,13 +44,12 @@ namespace cmd_io
     void set_clock_frequency(float frequency_hz);
     void run_clocked_tasks(bool clock_state);
     std::list<ClockedPair> clocked_tasks;
-    std::list<std::string> log_queue;
     std::list<uint16_t> breakpoints;
     repeating_timer_t lfo_timer;
     repeating_timer_t pin_toggle_timer;
     bool clock_pin_state = true;
     bool toggle_pin_state = true;
-    bool verbose = false;
+//    bool verbose = false;
     uint16_t memdump_addr = 0;
     uint16_t memdump_length = 0;
     uint8_t pin_toggle_number;
@@ -109,11 +108,6 @@ namespace cmd_io
 
     void loop(void)
     {
-        for (auto iter = log_queue.begin(); iter != log_queue.end(); iter++)
-        {
-            std::cout << *iter << std::endl;
-        }
-        log_queue.clear();
 //        if (!gpio_get(PIN_CLOCK))
 //        {
 //            continue;
@@ -316,9 +310,9 @@ namespace cmd_io
     {
         char buffer[128];
         sprintf(buffer, "     Data          Addr                   Data     SRRni r. B     C           AddrH    AddrL");
-        log_queue.push_back(buffer);
+        log_queue::log(buffer);
         sprintf(buffer, ".... ..    .. .... .... ........ ........ ........ YYWIQ.S. e.....K. ........ FEDCBA98 76543210");
-        log_queue.push_back(buffer);
+        log_queue::log(buffer);
         uint64_t pins = gpioc_hilo_in_get();
 //        uint64_t pins = sio_hw->gpio_in | ((uint64_t)sio_hw->gpio_hi_in << 32);
         uint64_t mask = (static_cast<uint64_t>(sio_hw->gpio_hi_oe) << 32) | static_cast<uint64_t>(sio_hw->gpio_oe);
@@ -329,7 +323,7 @@ namespace cmd_io
             std::bitset<8>(pins >> 40).to_string().c_str(), std::bitset<8>(pins >> 32).to_string().c_str(), 
             std::bitset<8>(pins >> 24).to_string().c_str(), std::bitset<8>(pins >> 16).to_string().c_str(), 
             std::bitset<8>(pins >> 8).to_string().c_str(), std::bitset<8>(pins).to_string().c_str());
-        log_queue.push_back(buffer);
+        log_queue::log(buffer);
         sprintf(buffer, "%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s <- In=0 Out=1",
             static_cast<uint16_t>(mask >> 48), static_cast<uint8_t>(mask >> 40), static_cast<uint8_t>(mask >> 32),
             static_cast<uint16_t>(mask >> 16), static_cast<uint16_t>(mask), 
@@ -337,7 +331,7 @@ namespace cmd_io
             std::bitset<8>(mask >> 40).to_string().c_str(), std::bitset<8>(mask >> 32).to_string().c_str(), 
             std::bitset<8>(mask >> 24).to_string().c_str(), std::bitset<8>(mask >> 16).to_string().c_str(), 
             std::bitset<8>(mask >> 8).to_string().c_str(), std::bitset<8>(mask).to_string().c_str());
-        log_queue.push_back(buffer);
+        log_queue::log(buffer);
     }
 
     bool cmd_pin_status_on_clock(CommandInput input = CommandInput())
@@ -529,7 +523,7 @@ namespace cmd_io
         }
         else
         {
-            log_queue.push_back(rom_ram::dump_memory(memdump_addr, memdump_length));
+            log_queue::log(rom_ram::dump_memory(memdump_addr, memdump_length));
         }
         return false;
     }
@@ -550,7 +544,7 @@ namespace cmd_io
     bool cmd_dump_memory_on_clock(CommandInput input = CommandInput())
     {
         clocked_tasks.push_back(ClockedPair("Memory",
-                    [](bool){ VERBOSE("lambda"); log_queue.push_back(rom_ram::dump_memory(memdump_addr, memdump_length)); }));
+                    [](bool){ VERBOSE("lambda"); log_queue::log(rom_ram::dump_memory(memdump_addr, memdump_length)); }));
         VERBOSE("Dumping %04x/%04x on clock", memdump_addr, memdump_length);
         return false;
     }
@@ -659,7 +653,7 @@ namespace cmd_io
 
     void cmd_verbose_logging(bool set)
     {
-        verbose = set;
+        log_queue::verbose(set);
     }
 
     bool cmd_toggle_pin_10hz(CommandInput input = CommandInput())
