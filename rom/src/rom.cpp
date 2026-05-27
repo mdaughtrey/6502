@@ -9,6 +9,7 @@
 #include <menu.h>
 #include <iohost_read.h>
 #include <log_queue.h>
+#include <pio_break.h>
 
 int main()
 {
@@ -18,6 +19,7 @@ int main()
     rom_ram::init();
     via6522::init();
     iohost_read::init();
+    pio_break::init();
     while (1)
     {
         int8_t input = getchar_timeout_us(0);

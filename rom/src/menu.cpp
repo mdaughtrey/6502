@@ -56,37 +56,22 @@ Command commands_top[] = {
 };
 
 Command commands_io[] = {
-{
-     'a', "Assert Address Bus (Hex)",
-     Validator("[0-9a-fA-F]{4}", "Enter addr XXXX"),
-     cmd_io::cmd_assert_address_bus 
-},
+{'a', "Assert Address Bus (Hex)", Validator("[0-9a-fA-F]{4}", "Enter addr XXXX"), cmd_io::cmd_assert_address_bus },
 {'b', "Breakpoint", Validator("([0-9a-fA-F]{4})","XXXX"), cmd_io::cmd_set_breakpoint },
 {'B', "Clear breakpoint", Validator("([0-9a-fA-F]{4})","XXXX"), cmd_io::cmd_clear_breakpoint },
-{
-    'c', "Set Clock Frequency",
-    Validator("(\\d+)", "Hz"),
-    cmd_io::cmd_set_clock_frequency 
-},
-{
-    'C', "Stop Clock",
-    Validator(""),
-    cmd_io::cmd_clock_stop
-},
+{'c', "Set Clock Frequency", Validator("(\\d+)", "Hz"), cmd_io::cmd_set_clock_frequency },
+{'C', "Stop Clock", Validator(""), cmd_io::cmd_clock_stop },
 {'e', "Bus Enable", Validator(""), cmd_io::cmd_bus_active },
 {'E', "Bus Disable", Validator(""), cmd_io::cmd_bus_inactive },
 {'?', "help", Validator(""), cmd_help },
-{
-    'I', "I/O Value",
-    Validator("([io])(\\d\\d)([01])", "[io]Pin[01] (i|o)NN(1|0)"),
-    cmd_io::cmd_io 
-},
-{'h', "Hard Breakpoint", Validator("([0-9a-fA-F]{4})","hhhh"), pio_break::set },
-{'H', "Clear Hard Breakpoint", Validator("([0-9a-fA-F]{4})","hhhh"), pio_break::clear },
+{'I', "I/O Value", Validator("([io])(\\d\\d)([01])", "[io]Pin[01] (i|o)NN(1|0)"), cmd_io::cmd_io },
+{'h', "Hard Breakpoint", Validator("([0-9a-fA-F]{4})", "XXXX"), pio_break::cmd_set },
+{'H', "Clear Hard Breakpoint", Validator("([0-9a-fA-F]{4})", "XXXX"), pio_break::cmd_clear },
 {'i', "Step Instruction", Validator(""), cmd_io::cmd_step_instruction },
 {'j', "JSON Output", Validator(""), [](CommandInput) -> bool { return cmd_io::cmd_use_json(true); } },
 {'J', "Text Output", Validator(""), [](CommandInput) -> bool { return cmd_io::cmd_use_json(false); } },
 {'l', "List Breakpoints", Validator(""), cmd_io::cmd_list_breakpoints },
+{'L', "List Hard Breakpoints", Validator(""), pio_break::cmd_list },
 {'m', "set memory dump", Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})","XXXX/XXXX"), cmd_io::cmd_set_memory_dump },
 {'M', "memory dump on clock", Validator(""), cmd_io::cmd_dump_memory_on_clock },
 //{'m', "Run Memory Operation", validator,cmd_io::cmd_memory_operation },
@@ -96,11 +81,7 @@ Command commands_io[] = {
 {'P', "Pin Status on Clock", Validator(""), cmd_io::cmd_pin_status_on_clock },
 {'R', "Reset", Validator(""), cmd_io::cmd_reset },
 {'s', "Step Clock", Validator(""), cmd_io::cmd_step_clock },
-{
-    'u', "Dump Memory (XXXX)",
-    Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})", "Enter addr/length (XXXX/XXXX)"),
-    cmd_io::cmd_dump_memory
-},
+{'u', "Dump Memory (XXXX)", Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})", "Enter addr/length (XXXX/XXXX)"), cmd_io::cmd_dump_memory },
 {'o', "Toggle Pin 10hz (NN)", Validator("([0-9]{2})", "Pin Number (NN)"), cmd_io::cmd_toggle_pin_10hz },
 //{'T', "Test I/O Pins", Validator(""), cmd_io::cmd_test_io_pins },
 {'t', "Clear Clocked Tasks", Validator(""), cmd_io::cmd_clear_clocked_tasks },
@@ -123,11 +104,7 @@ Command commands_rom_ram[] = {
 {'i', "Upload ROM Image", Validator(""), rom_ram::cmd_upload_rom_image },
 {'l', "List Programs", Validator(""), rom_ram::cmd_list_programs },
 // {'u', "Upload ROM", hex_validator, rom_ram::cmd_upload_rom },
-{
-    'p', "Load Program (NN)",
-    Validator("(\\d+)", "Program number"),
-    rom_ram::cmd_load_program_to_memory 
-},
+{'p', "Load Program (NN)", Validator("(\\d+)", "Program number"), rom_ram::cmd_load_program_to_memory },
 {'t', "Upload test image", Validator(""), rom_ram::cmd_upload_test_image },
 {'w', "Write to Memory (XXXX/XX)", Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{2})", "Enter addr/value (XXXX/XX)"), rom_ram::cmd_write_to_memory},
 {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},

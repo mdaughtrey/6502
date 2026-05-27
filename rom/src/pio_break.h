@@ -6,10 +6,11 @@
 namespace pio_break
 {
     void init();
-    bool set(CommandInput);
-    bool clear(CommandInput);
-    bool disable(CommandInput);
-    bool enable(CommandInput);
+    bool cmd_set(CommandInput);
+    bool cmd_clear(CommandInput);
+    bool cmd_disable(CommandInput);
+    bool cmd_enable(CommandInput);
+    bool cmd_list(CommandInput);
 }
 
 
