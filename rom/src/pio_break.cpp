@@ -59,37 +59,41 @@ namespace pio_break
     {
         if (input.empty())
         {
-            return false;
+            return true;
         }
-        return true;
 
         if (breakpoints.size() >= MAX_BREAKPOINTS)
         {
             std::cout << "Maximum number of breakpoints reached." << std::endl;
-            return true;
+            return false;
         }
-        auto address = std::stoi(input[1], nullptr, 16);
+        uint16_t address = std::stoi(input[1], nullptr, 16);
         VERBOSE("Address %04x", address);
 
         auto it = std::find_if(breakpoints.begin(), breakpoints.end(),
             [&](const BreakPoint & b) { return b.address == address; });
 
-        if (it == breakpoints.end()) 
+        if (it != breakpoints.end()) 
         {
-            VERBOSE("Adding breakpoint at %04x", address);
-            int sm = pio_claim_unused_sm(pio, true);
-            pio_sm_init(pio, sm, offset, &smc);
-            pio_sm_set_enabled(pio, sm, true);
-//            breakpoints.emplace_back(BreakPoint(address, true, sm));   // or {value, flag}
+            VERBOSE("Address %04x already set", address);
+            return false;
         }
-        return true;
+
+        VERBOSE("Adding breakpoint at %04x", address);
+        int sm = pio_claim_unused_sm(pio, true);
+        VERBOSE("sm %d", sm);
+        pio_sm_init(pio, sm, offset, &smc);
+        pio_sm_set_enabled(pio, sm, true);
+        pio_sm_put_blocking(pio, sm, address);
+        breakpoints.push_back({address, true, sm});   
+        return false;
     }
 
     bool cmd_clear(CommandInput input = CommandInput())
     {
         if (input.empty())
         {
-            return false;
+            return true;
         }
         auto address = std::stoi(input[1], nullptr, 16);
         breakpoints.erase(
@@ -101,34 +105,35 @@ namespace pio_break
             breakpoints.end()
         );
         VERBOSE("Cleared");
-        return true;
+        return false;
     }
 
     bool cmd_enable(CommandInput input = CommandInput())
     {
         if (input.empty())
         {
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
     bool cmd_disable(CommandInput input = CommandInput())
     {
         if (input.empty())
         {
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
     bool cmd_list(CommandInput input = CommandInput())
     {
+        VERBOSE("There are %d breakpoints\r\n", breakpoints.size());
         for (auto iter : breakpoints)
         {
-            VERBOSE("Breakpoint at %04x", iter.address);
+            std::cout << "Breakpoint at " << std::hex << std::setfill('0') << std::setw(4) << iter.address << std::endl;
         }
-        return true;
+        return false;
     }
 
 } // namespace pio_break
