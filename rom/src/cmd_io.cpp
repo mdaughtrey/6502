@@ -40,11 +40,11 @@ namespace cmd_io
     bool cmd_pin_status(CommandInput input);
     bool cmd_init_buses(CommandInput);
     void pin_status(bool);
-    void breakpoint_check(bool);
+//    void breakpoint_check(bool);
     void set_clock_frequency(float frequency_hz);
     void run_clocked_tasks(bool clock_state);
     std::list<ClockedPair> clocked_tasks;
-    std::list<uint16_t> breakpoints;
+//    std::list<uint16_t> breakpoints;
     repeating_timer_t lfo_timer;
     repeating_timer_t pin_toggle_timer;
     bool clock_pin_state = true;
@@ -81,8 +81,8 @@ namespace cmd_io
         gpio_pull_up(PIN_IRQ);
         gpio_pull_up(PIN_NMI);
 
-        gpio_set_dir(PIN_READY, GPIO_OUT);
-        gpio_put(PIN_READY, 1);
+        gpio_pull_up(PIN_READY);
+        gpio_set_dir(PIN_READY, GPIO_IN);
 
         uint64_t mask = RESET_MASK | CLOCK_MASK | PHI0_MASK | BE_MASK | NMI_MASK;
         VERBOSE("cmd_init_buses: Pin initialization mask is %s", std::bitset<64>(mask).to_string().c_str());
@@ -560,7 +560,7 @@ namespace cmd_io
             }
         }
     }
-
+#if 0
     void breakpoint_check(bool clock_state)
     {
 //        char buffer[64];
@@ -644,7 +644,7 @@ namespace cmd_io
         }
         return false;
     }
-
+#endif
     bool cmd_clear_clocked_tasks(CommandInput input = CommandInput())
     {
         clocked_tasks.clear();

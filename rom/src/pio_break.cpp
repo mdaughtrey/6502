@@ -36,7 +36,9 @@ namespace pio_break
     void isr(void)
     {
         VERBOSE("ISR");
-        clock_stop(clk_gpout3);
+        pio_interrupt_clear(pio, 0);
+
+//        clock_stop(clk_gpout3);
     }
 
     void init()
@@ -47,11 +49,15 @@ namespace pio_break
         smc =  break_program_get_default_config(offset);
         sm_config_set_in_pins(&smc, 0);
         sm_config_set_in_pin_count(&smc, 16);
+        sm_config_set_sideset_pins(&smc, PIN_READY);
         sm_config_set_out_shift(&smc, false, false, 16);    // autopull disabled
         sm_config_set_in_shift(&smc, false, false, 16);      // autopush disabled
+        pio_gpio_init(pio, PIN_READY);
+        gpio_pull_up(PIN_READY);
         irq_set_exclusive_handler(PIO1_IRQ_0, isr);
 
         pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
+        irq_set_enabled(PIO1_IRQ_0, true);
         std::cout << "pio_break init done" << std::endl;
     }
     
@@ -83,6 +89,7 @@ namespace pio_break
         int sm = pio_claim_unused_sm(pio, true);
         VERBOSE("sm %d", sm);
         pio_sm_init(pio, sm, offset, &smc);
+        pio_sm_set_pins_with_mask(pio, sm, 0, 1u << PIN_READY);
         pio_sm_set_enabled(pio, sm, true);
         pio_sm_put_blocking(pio, sm, address);
         breakpoints.push_back({address, true, sm});   
@@ -137,4 +144,3 @@ namespace pio_break
     }
 
 } // namespace pio_break
-

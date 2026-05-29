@@ -13,7 +13,7 @@
 // ----- //
 
 #define break_wrap_target 0
-#define break_wrap 7
+#define break_wrap 9
 #define break_pio_version 1
 
 static const uint16_t break_program_instructions[] = {
@@ -22,17 +22,19 @@ static const uint16_t break_program_instructions[] = {
     0xa027, //  1: mov    x, osr
     0xa040, //  2: mov    y, pins
     0x00a2, //  3: jmp    x != y, 2
-    0xc020, //  4: irq    wait 0
+    0xd820, //  4: irq    wait 0          side 1
     0xa040, //  5: mov    y, pins
-    0x00a2, //  6: jmp    x != y, 2
+    0x00a8, //  6: jmp    x != y, 8
     0x0005, //  7: jmp    5
+    0xb042, //  8: nop                    side 0
+    0x0002, //  9: jmp    2
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program break_program = {
     .instructions = break_program_instructions,
-    .length = 8,
+    .length = 10,
     .origin = -1,
     .pio_version = break_pio_version,
 #if PICO_PIO_VERSION > 0
@@ -43,6 +45,7 @@ static const struct pio_program break_program = {
 static inline pio_sm_config break_program_get_default_config(uint offset) {
     pio_sm_config c = pio_get_default_sm_config();
     sm_config_set_wrap(&c, offset + break_wrap_target, offset + break_wrap);
+    sm_config_set_sideset(&c, 2, true, true);
     return c;
 }
 #endif

@@ -1,12 +1,17 @@
 .program break
+.side_set 1 opt pindirs
+
 load_match:
-    pull block      ; wait for match data
-    mov x, osr      ; x <- OSR
+    pull block                ; wait for match data
+    mov x, osr                ; x <- OSR
 wait_for_match:
-    mov y, pins     ; load pins
+    mov y, pins               ; load pins without touching READY
     jmp x!=y, wait_for_match  ; loop while no match
-    irq wait 0      ; wait for interrupt completion
+    irq wait 0               side 1  ; drive READY low and raise IRQ together
 hold_while_match:
-    mov y, pins
-    jmp x!=y, wait_for_match  ; loop while match
+    mov y, pins               ; keep polling without changing READY
+    jmp x!=y, release_ready   ; release READY when the address no longer matches
     jmp hold_while_match
+release_ready:
+    nop                      side 0  ; stop driving READY
+    jmp wait_for_match

@@ -29,10 +29,10 @@ namespace cmd_io
     bool cmd_bus_inactive(CommandInput); 
     bool cmd_set_memory_dump(CommandInput);
     bool cmd_dump_memory_on_clock(CommandInput);
-    bool cmd_set_breakpoint(CommandInput);
-    bool cmd_clear_breakpoint(CommandInput);
-    bool cmd_clear_all_breakpoints(CommandInput);
-    bool cmd_list_breakpoints(CommandInput);
+//    bool cmd_set_breakpoint(CommandInput);
+//    bool cmd_clear_breakpoint(CommandInput);
+//    bool cmd_clear_all_breakpoints(CommandInput);
+//    bool cmd_list_breakpoints(CommandInput);
     bool cmd_clear_clocked_tasks(CommandInput);
     bool cmd_dump_memory(CommandInput);
     void cmd_verbose_logging(bool);
