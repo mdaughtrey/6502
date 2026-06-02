@@ -37,7 +37,7 @@ namespace iohost_read
     void iohost_read_isr()
     {
         isr = true;
-        pio_sm_set_enabled(pio, sm, false);
+//        pio_sm_set_enabled(pio, sm, false);
         pio_interrupt_clear(pio0, 0);
     }
 
@@ -103,7 +103,7 @@ namespace iohost_read
         pio_sm_init(pio, sm, offset, &smc);
         // Push pattern into OSR
         irq_set_exclusive_handler(PIO0_IRQ_0, iohost_read_isr);
-        pio_sm_set_enabled(pio, sm, true);
+//        pio_sm_set_enabled(pio, sm, true);
         pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
         return false;
     }
@@ -203,10 +203,10 @@ namespace iohost_read
             }
             std::cout << std::endl << "Reading Buffers Complete" << std::endl;
             gpio_put(PIN_READY, 1);
-            if (!buffers[LIO_SIGNALS] & 0x80)   // TOHOST_READY
+            if ((0xff == buffers[LIO_SIGNALS]) && (!buffers[LIO_SIGNALS] & 0x80))   // TOHOST_READY
             {
                 std::cout << "Not Ready" << std::endl;
-                pio_sm_set_enabled(pio, sm, true);
+//                pio_sm_set_enabled(pio, sm, true);
                 return;
             }
             std::cout << "Ready" << std::endl;
@@ -242,7 +242,6 @@ namespace iohost_read
                 std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)iter << " ";
             }
             std::cout << std::endl;
-            pio_sm_set_enabled(pio, sm, true);
         }
     }
 

@@ -121,9 +121,9 @@ Command commands_via6522[] = {
 };
 
 Command commands_debugger[] = {
-    {'b', "set breakpoint (XXXX)", Validator("([0-9a-fA-F]{4})"), cmd_io::cmd_set_breakpoint},
+    {'b', "set breakpoint (XXXX)", Validator("([0-9a-fA-F]{4})"), pio_break::cmd_set},
 //    {'B', "clear all breakpoints X)", Validator("([0-9a-fA-F]{4})"), cmd_io::cmd_clear_breakpoint},
-    {'B', "clear all breakpoints", Validator(""), cmd_io::cmd_clear_all_breakpoints},
+    {'B', "clear all breakpoints", Validator(""), pio_break::cmd_clear_all},
     {'c', "Set Clock Frequency", Validator("(\\d+)"), cmd_io::cmd_set_clock_frequency },
     {'C', "Stop Clock", Validator(""), cmd_io::cmd_clock_stop },
     {'d', "dump memory (XXXX/XXXX)", Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})"), cmd_io::cmd_dump_memory},

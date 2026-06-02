@@ -11,6 +11,10 @@ namespace pio_break
     bool cmd_disable(CommandInput);
     bool cmd_enable(CommandInput);
     bool cmd_list(CommandInput);
+    bool cmd_clear_all(CommandInput);
+    bool is_break(void);
+    void clear(void);
+    void assert_ready(bool);
 }
 
 

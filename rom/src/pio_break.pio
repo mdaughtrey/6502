@@ -7,11 +7,11 @@ load_match:
 wait_for_match:
     mov y, pins               ; load pins without touching READY
     jmp x!=y, wait_for_match  ; loop while no match
-    irq wait 0               side 1  ; drive READY low and raise IRQ together
+    irq wait 0               side 0  ; drive READY low and raise IRQ together
 hold_while_match:
     mov y, pins               ; keep polling without changing READY
-    jmp x!=y, release_ready   ; release READY when the address no longer matches
+    jmp x!=y, wait_for_match   ; release READY when the address no longer matches
     jmp hold_while_match
-release_ready:
-    nop                      side 0  ; stop driving READY
-    jmp wait_for_match
+//jrelease_ready:
+//    nop                      side 1  ; stop driving READY
+//    jmp wait_for_match

@@ -29,6 +29,7 @@ class BackendSession:
     - Event queue for async events
     - Session state (initialized, running, stopped, etc.)
     """
+    CLOCKSPEED = 2000000;
     
     def __init__(self, serial_conn=None):
         """Initialize a new session.
@@ -326,10 +327,10 @@ class BackendSession:
         return self._build_read_memory_response(response)
 
     def target_run(self) -> None:    
-        self.target_write(b'c10\r\n')
+        self.target_write(f'c{self.CLOCKSPEED}\r\n'.encode())
 
     def target_continue(self) -> None:    
-        self.target_write(b'c10\r\n')
+        self.target_write(f'c{self.CLOCKSPEED}\r\n'.encode())
 
     def target_pause(self) -> None:    
         self.target_write(b'C')

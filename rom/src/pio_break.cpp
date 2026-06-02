@@ -14,6 +14,7 @@
 #include <pin_defs.h>
 #include "log_queue.h"
 #include "pio_break.pio.h"
+#include "pio_break.h"
 // #include <rom_ram_internal.h>
 
 namespace pio_break
@@ -32,18 +33,30 @@ namespace pio_break
     PIO pio = pio1;
     pio_sm_config smc;
     uint offset;
+    bool isr_set = false;
 
     void isr(void)
     {
         VERBOSE("ISR");
+        isr_set = true;
         pio_interrupt_clear(pio, 0);
 
 //        clock_stop(clk_gpout3);
     }
 
+    bool is_break(void)
+    {
+        return isr_set;
+    }
+
+    void clear(void)
+    {
+        isr_set = false;
+//        assert_ready(false);
+    }
+
     void init()
     {
-        std::cout << "pio_break Init" << std::endl;
         breakpoints.clear();
         offset = pio_add_program(pio, &break_program);
         smc =  break_program_get_default_config(offset);
@@ -53,12 +66,11 @@ namespace pio_break
         sm_config_set_out_shift(&smc, false, false, 16);    // autopull disabled
         sm_config_set_in_shift(&smc, false, false, 16);      // autopush disabled
         pio_gpio_init(pio, PIN_READY);
-        gpio_pull_up(PIN_READY);
+        assert_ready(false);
         irq_set_exclusive_handler(PIO1_IRQ_0, isr);
 
         pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
         irq_set_enabled(PIO1_IRQ_0, true);
-        std::cout << "pio_break init done" << std::endl;
     }
     
     bool cmd_set(CommandInput input = CommandInput())
@@ -141,6 +153,30 @@ namespace pio_break
             std::cout << "Breakpoint at " << std::hex << std::setfill('0') << std::setw(4) << iter.address << std::endl;
         }
         return false;
+    }
+
+    bool cmd_clear_all(CommandInput input = CommandInput())
+    {
+        for (auto iter: breakpoints)
+        {
+            pio_sm_unclaim(pio, iter.sm);
+        }
+        breakpoints.clear();
+        return false;
+    }
+
+    void assert_ready(bool set)
+    {
+        if (set)
+        {
+            gpio_set_dir(PIN_READY, GPIO_OUT);
+            gpio_put(PIN_READY, 0);
+        }
+        else
+        {
+          gpio_set_dir(PIN_READY, GPIO_IN);
+          gpio_pull_up(PIN_READY);
+        }
     }
 
 } // namespace pio_break

@@ -23,6 +23,7 @@
 #include "pin_defs.h"
 #include "bus_asserts.h"
 #include "log_queue.h"
+#include "pio_break.h"
 
 // `rom1_bin` and `rom1_bin_len` are defined in `src/ioutils.h` (binary data).
 // Declare them `extern` here instead of including the header to avoid multiple
@@ -66,6 +67,7 @@ namespace cmd_io
         cmd_init_buses(CommandInput());
     }
 
+
     bool cmd_init_buses(CommandInput input = CommandInput())
     {
         for (auto ii = 0; ii < 64; ii++)
@@ -77,12 +79,10 @@ namespace cmd_io
         gpio_set_dir(PIN_BUS_ENABLE, GPIO_OUT);
         gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
 
-        // Set pullup on READY
         gpio_pull_up(PIN_IRQ);
         gpio_pull_up(PIN_NMI);
 
-        gpio_pull_up(PIN_READY);
-        gpio_set_dir(PIN_READY, GPIO_IN);
+        pio_break::assert_ready(false);
 
         uint64_t mask = RESET_MASK | CLOCK_MASK | PHI0_MASK | BE_MASK | NMI_MASK;
         VERBOSE("cmd_init_buses: Pin initialization mask is %s", std::bitset<64>(mask).to_string().c_str());
@@ -108,15 +108,21 @@ namespace cmd_io
 
     void loop(void)
     {
-//        if (!gpio_get(PIN_CLOCK))
-//        {
-//            continue;
-//        }
-//        if (!task_queue.empty())
-//        {
-//            task_queue.front()();
-//            task_queue.pop_front();
-//        }
+        if (pio_break::is_break())
+        {
+            set_clock_frequency(0.0);
+            pio_break::clear();
+            VERBOSE("Breakpoint hit");
+            uint16_t addr = static_cast<uint16_t>(gpioc_hilo_in_get() & ADDR_MASK);
+            if (useJSONIO)
+            {
+                printf("{\"event\": \"break\", \"address\": \"%04x\"}\r\n", addr);
+            }
+            else
+            {
+                printf("Break @%04x", addr);
+            }
+        }
     }
 
     static bool lfo_timer_callback(repeating_timer_t *t)
@@ -237,6 +243,7 @@ namespace cmd_io
         VERBOSE("cmd_step_instruction entry\r\n");
         do
         {
+            VERBOSE("cmd_step_instruction loop");
             cmd_step_clock(CommandInput());
         } while(!(gpioc_hilo_in_get() & SYNC_MASK));
         VERBOSE("cmd_step_instruction exit\r\n");
@@ -245,6 +252,9 @@ namespace cmd_io
 
     bool cmd_step_clock(CommandInput input = CommandInput())
     {
+        VERBOSE("cmd_step_clock entry");
+        set_clock_frequency(0.0);
+        pio_break::assert_ready(false);
         gpio_put(PIN_CLOCK, 0);
         sleep_ms(2);
         if (!clocked_tasks.empty())
@@ -257,6 +267,7 @@ namespace cmd_io
         {
             run_clocked_tasks(1);
         }
+        VERBOSE("cmd_step_clock exit");
         return false;
     }
 
@@ -700,7 +711,7 @@ namespace cmd_io
     {
         useJSONIO = true;
         set_clock_frequency(0.0);
-        breakpoints.clear();
+//        breakpoints.clear();
         init();
         return false;
     }
