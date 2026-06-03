@@ -66,7 +66,7 @@ Command commands_io[] = {
 {'e', "Bus Enable", Validator(""), cmd_io::cmd_bus_active },
 {'E', "Bus Disable", Validator(""), cmd_io::cmd_bus_inactive },
 {'?', "help", Validator(""), cmd_help },
-{'I', "I/O Value", Validator("([io])(\\d\\d)([01])", "[io]Pin[01] (i|o)NN(1|0)"), cmd_io::cmd_io },
+{'I', "I/O Value", Validator("([iop])(\\d\\d)([01])", "[iop]Pin[01] (i|o)NN(1|0)"), cmd_io::cmd_io },
 {'i', "Step Instruction", Validator(""), cmd_io::cmd_step_instruction },
 {'j', "JSON Output", Validator(""), [](CommandInput) -> bool { return cmd_io::cmd_use_json(true); } },
 {'J', "Text Output", Validator(""), [](CommandInput) -> bool { return cmd_io::cmd_use_json(false); } },

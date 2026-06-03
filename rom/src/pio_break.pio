@@ -7,11 +7,17 @@ load_match:
 wait_for_match:
     mov y, pins               ; load pins without touching READY
     jmp x!=y, wait_for_match  ; loop while no match
-    irq wait 0               side 0  ; drive READY low and raise IRQ together
+    ; --- match detected
+    irq nowait 0 side 0       ; drive READY and raise IRQ, nowait
+                              ; ... to let GPIO get to the address pins
+hold_ready_until_cpu_ack:
+    mov y, pins               ; keep sampling pins
+    jmp pin, release_ready    ; CPU clears IRQ → pin flag becomes true
+    jmp hold_ready_until_cpu_ack
+
+release_ready:
+    nop side 1                ; release READY (high-Z)
 hold_while_match:
-    mov y, pins               ; keep polling without changing READY
-    jmp x!=y, wait_for_match   ; release READY when the address no longer matches
+    mov y, pins
+    jmp x!=y, wait_for_match  ; when address changes, restart match search
     jmp hold_while_match
-//jrelease_ready:
-//    nop                      side 1  ; stop driving READY
-//    jmp wait_for_match

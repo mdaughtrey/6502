@@ -39,7 +39,6 @@ namespace pio_break
     {
         VERBOSE("ISR");
         isr_set = true;
-        pio_interrupt_clear(pio, 0);
 
 //        clock_stop(clk_gpout3);
     }
@@ -52,7 +51,7 @@ namespace pio_break
     void clear(void)
     {
         isr_set = false;
-//        assert_ready(false);
+        pio_interrupt_clear(pio, 0); // Release the IRQ, PIO program cycles
     }
 
     void init()
@@ -65,8 +64,9 @@ namespace pio_break
         sm_config_set_sideset_pins(&smc, PIN_READY);
         sm_config_set_out_shift(&smc, false, false, 16);    // autopull disabled
         sm_config_set_in_shift(&smc, false, false, 16);      // autopush disabled
+        sm_config_set_jmp_pin(&smc, PIO1_IRQ_0);
         pio_gpio_init(pio, PIN_READY);
-        assert_ready(false);
+//        assert_ready(false);
         irq_set_exclusive_handler(PIO1_IRQ_0, isr);
 
         pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
@@ -174,8 +174,8 @@ namespace pio_break
         }
         else
         {
-          gpio_set_dir(PIN_READY, GPIO_IN);
-          gpio_pull_up(PIN_READY);
+            gpio_set_dir(PIN_READY, GPIO_IN);
+            gpio_pull_up(PIN_READY);
         }
     }
 

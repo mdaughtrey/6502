@@ -82,7 +82,7 @@ namespace cmd_io
         gpio_pull_up(PIN_IRQ);
         gpio_pull_up(PIN_NMI);
 
-        pio_break::assert_ready(false);
+//        pio_break::assert_ready(false);
 
         uint64_t mask = RESET_MASK | CLOCK_MASK | PHI0_MASK | BE_MASK | NMI_MASK;
         VERBOSE("cmd_init_buses: Pin initialization mask is %s", std::bitset<64>(mask).to_string().c_str());
@@ -111,9 +111,10 @@ namespace cmd_io
         if (pio_break::is_break())
         {
             set_clock_frequency(0.0);
-            pio_break::clear();
-            VERBOSE("Breakpoint hit");
             uint16_t addr = static_cast<uint16_t>(gpioc_hilo_in_get() & ADDR_MASK);
+            pio_break::clear();
+//            pio_break::assert_ready(false);
+            VERBOSE("Breakpoint hit");
             if (useJSONIO)
             {
                 printf("{\"event\": \"break\", \"address\": \"%04x\"}\r\n", addr);
@@ -254,7 +255,7 @@ namespace cmd_io
     {
         VERBOSE("cmd_step_clock entry");
         set_clock_frequency(0.0);
-        pio_break::assert_ready(false);
+//        pio_break::assert_ready(false);
         gpio_put(PIN_CLOCK, 0);
         sleep_ms(2);
         if (!clocked_tasks.empty())
@@ -438,16 +439,24 @@ namespace cmd_io
 //        std::string pin(value.substr(1,2));
 //        std::string state(value.substr(3,1));
         uint8_t pin_num = std::stoi(input[2]);
-        VERBOSE("io: %s, pin: %u\r\n", input[1].c_str(), pin_num);
+        VERBOSE("iop: %s, pin: %u\r\n", input[1].c_str(), pin_num);
         gpio_init(pin_num);
-        gpio_set_dir(pin_num, "o" == input[1] ? GPIO_OUT : GPIO_IN);
-        if (input.size() >= 2)
+        switch (input[1][0])
         {
-            gpio_put(pin_num, "1" == input[3] ? true : false);
-        }
-        else
-        {
-            printf("Pin %u is %u\r\n", pin_num, gpio_get(pin_num));
+            case 'i':
+                gpio_set_dir(pin_num, GPIO_IN);
+                printf("Pin %u is %u\r\n", pin_num, gpio_get(pin_num));
+                break;
+
+            case 'o':
+                gpio_set_dir(pin_num, GPIO_OUT);
+                gpio_put(pin_num, "1" == input[3] ? true : false);
+                break;
+
+            case 'p':
+                gpio_set_dir(pin_num, GPIO_IN);
+                gpio_pull_up(pin_num);
+                break;
         }
         
         return false;
