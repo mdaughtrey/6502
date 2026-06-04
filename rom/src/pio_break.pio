@@ -7,17 +7,39 @@ load_match:
 wait_for_match:
     mov y, pins               ; load pins without touching READY
     jmp x!=y, wait_for_match  ; loop while no match
-    ; --- match detected
-    irq nowait 0 side 0       ; drive READY and raise IRQ, nowait
-                              ; ... to let GPIO get to the address pins
-hold_ready_until_cpu_ack:
-    mov y, pins               ; keep sampling pins
-    jmp pin, release_ready    ; CPU clears IRQ → pin flag becomes true
-    jmp hold_ready_until_cpu_ack
 
-release_ready:
-    nop side 1                ; release READY (high-Z)
-hold_while_match:
-    mov y, pins
-    jmp x!=y, wait_for_match  ; when address changes, restart match search
-    jmp hold_while_match
+    ; --- match detected
+    ; assert READY low
+    ; Push address to 
+    ; raise IRQ (nowait)
+    mov isr, y
+    push noblock              ; send our address
+    irq nowait 0 side 0       ; drive READY and raise IRQ, nowait
+
+hold_until_ack:
+    pull block                ; wait for the host to turn off the clock
+    nop side 1                ; then we wake and release READY
+    push block                ; signal that we've released
+    jmp load_match
+
+
+; load_match:
+;     pull block                ; wait for match data
+;     mov x, osr                ; x <- OSR
+; wait_for_match:
+;     mov y, pins               ; load pins without touching READY
+;     jmp x!=y, wait_for_match  ; loop while no match
+;     ; --- match detected
+;     irq nowait 0 side 0       ; drive READY and raise IRQ, nowait
+;                               ; ... to let GPIO get to the address pins
+; hold_ready_until_cpu_ack:
+;     mov y, pins               ; keep sampling pins
+;     jmp pin, release_ready    ; CPU clears IRQ → pin flag becomes true
+;     jmp hold_ready_until_cpu_ack
+; 
+; release_ready:
+;     nop side 1                ; release READY (high-Z)
+; hold_while_match:
+;     mov y, pins
+;     jmp x!=y, wait_for_match  ; when address changes, restart match search
+;     jmp hold_while_match

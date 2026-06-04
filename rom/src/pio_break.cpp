@@ -23,6 +23,7 @@ namespace pio_break
     {
         uint16_t address;
         bool enabled;
+        bool triggered;
         int sm;
     } BreakPoint;
     typedef std::vector<BreakPoint> BreakPoints;
@@ -33,24 +34,38 @@ namespace pio_break
     PIO pio = pio1;
     pio_sm_config smc;
     uint offset;
-    bool isr_set = false;
+    int32_t sm_pending_breaks[4] = {-1, -1, -1, -1};
 
     void isr(void)
     {
-        VERBOSE("ISR");
-        isr_set = true;
-
-//        clock_stop(clk_gpout3);
+        pio_interrupt_clear(pio, 0); // Release the IRQ, PIO program cycles
+        VERBOSE("pio_break ISR");
+        for (auto & iter : breakpoints)
+        {
+            while (!pio_sm_is_rx_fifo_empty(pio, iter.sm))
+            {
+      		    pio_sm_get(pio, iter.sm);
+                iter.triggered = true;
+            }
+        }
     }
 
-    bool is_break(void)
+    bool is_break(uint16_t & address)
     {
-        return isr_set;
+        for (auto & iter : breakpoints)
+        {
+            if (iter.triggered)
+            {
+                address = iter.address;
+                iter.triggered = false;
+                return true;
+            }
+        }
+        return false;
     }
 
     void clear(void)
     {
-        isr_set = false;
         pio_interrupt_clear(pio, 0); // Release the IRQ, PIO program cycles
     }
 
@@ -104,7 +119,7 @@ namespace pio_break
         pio_sm_set_pins_with_mask(pio, sm, 0, 1u << PIN_READY);
         pio_sm_set_enabled(pio, sm, true);
         pio_sm_put_blocking(pio, sm, address);
-        breakpoints.push_back({address, true, sm});   
+        breakpoints.push_back({address, true, false, sm});   
         return false;
     }
 
@@ -176,6 +191,37 @@ namespace pio_break
         {
             gpio_set_dir(PIN_READY, GPIO_IN);
             gpio_pull_up(PIN_READY);
+        }
+    }
+
+
+    void release_ready(uint16_t address)
+    {
+        for (auto iter : breakpoints)
+        {
+            if (iter.address == address)
+            {
+                pio_sm_put(pio, iter.sm, address);
+            }
+            // Wait for the ACK
+    	    while (pio_sm_is_rx_fifo_empty(pio, iter.sm));
+    	    while (!pio_sm_is_rx_fifo_empty(pio, iter.sm))
+            {
+      		    pio_sm_get(pio, iter.sm);
+            }
+            break;
+        }
+    }
+
+    void reset(uint16_t address)
+    {
+        for (auto iter : breakpoints)
+        {
+            if (iter.address == address)
+            {
+                pio_sm_put(pio, iter.sm, address);
+            }
+            break;
         }
     }
 

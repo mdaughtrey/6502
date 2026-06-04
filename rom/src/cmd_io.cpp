@@ -108,12 +108,21 @@ namespace cmd_io
 
     void loop(void)
     {
-        if (pio_break::is_break())
+        uint16_t address;
+        if (pio_break::is_break(address))
         {
+            std::cout << "cmd_io loop, address " << std::hex << address << std::endl;
             set_clock_frequency(0.0);
-            uint16_t addr = static_cast<uint16_t>(gpioc_hilo_in_get() & ADDR_MASK);
             pio_break::clear();
-//            pio_break::assert_ready(false);
+            // the PIO is waiting to release READY, send it data to trigger
+            pio_break::release_ready(address);
+//            std::cout << "send any" << std::endl;
+//            pio_break::txfifo(0x00000000);
+            std::cout << "memory read" << std::endl;
+            // Ready is released, read memory
+            uint16_t addr = static_cast<uint16_t>(gpioc_hilo_in_get() & ADDR_MASK);
+            std::cout << "send addr" << std::hex << addr << std::endl;
+            pio_break::reset(address);
             VERBOSE("Breakpoint hit");
             if (useJSONIO)
             {
