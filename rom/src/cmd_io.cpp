@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include <list>
+#include <set>
 #include <utility>
 #include <deque>
 
@@ -41,6 +42,7 @@ namespace cmd_io
     bool cmd_pin_status(CommandInput input);
     bool cmd_init_buses(CommandInput);
     void pin_status(bool);
+    void reset_pending_breakpoints(void);
 //    void breakpoint_check(bool);
     void set_clock_frequency(float frequency_hz);
     void run_clocked_tasks(bool clock_state);
@@ -56,6 +58,7 @@ namespace cmd_io
     uint8_t pin_toggle_number;
     float frequency_hz = 0.0;
     bool useJSONIO = false;
+    std::set<uint16_t> breakpoints_pending;
 
     void init(void)
     {
@@ -111,26 +114,18 @@ namespace cmd_io
         uint16_t address;
         if (pio_break::is_break(address))
         {
-            std::cout << "cmd_io loop, address " << std::hex << address << std::endl;
             set_clock_frequency(0.0);
             pio_break::clear();
             // the PIO is waiting to release READY, send it data to trigger
             pio_break::release_ready(address);
-//            std::cout << "send any" << std::endl;
-//            pio_break::txfifo(0x00000000);
-            std::cout << "memory read" << std::endl;
-            // Ready is released, read memory
-            uint16_t addr = static_cast<uint16_t>(gpioc_hilo_in_get() & ADDR_MASK);
-            std::cout << "send addr" << std::hex << addr << std::endl;
-            pio_break::reset(address);
-            VERBOSE("Breakpoint hit");
+            breakpoints_pending.insert(address);
             if (useJSONIO)
             {
-                printf("{\"event\": \"break\", \"address\": \"%04x\"}\r\n", addr);
+                printf("{\"event\": \"break\", \"address\": \"%04x\"}\r\n", address);
             }
             else
             {
-                printf("Break @%04x", addr);
+                printf("Break @%04x", address);
             }
         }
     }
@@ -214,9 +209,19 @@ namespace cmd_io
         return false;
     }
 
+    void reset_pending_breakpoints(void)
+    {
+        for (uint16_t address : breakpoints_pending)
+        {
+            pio_break::reset(address);
+        }
+        breakpoints_pending.clear();
+    }
+
     void set_clock_frequency(float frequency_hz)
     {
         cancel_repeating_timer(&lfo_timer);
+        reset_pending_breakpoints();
         
         uint32_t sys_clk = clock_get_hz(clk_usb);
         VERBOSE("Clock frequency %f Hz", frequency_hz);
@@ -277,6 +282,7 @@ namespace cmd_io
         {
             run_clocked_tasks(1);
         }
+        reset_pending_breakpoints();
         VERBOSE("cmd_step_clock exit");
         return false;
     }

@@ -18,9 +18,15 @@ wait_for_match:
 
 hold_until_ack:
     pull block                ; wait for the host to turn off the clock
+    mov isr, osr
     nop side 1                ; then we wake and release READY
     push block                ; signal that we've released
-    jmp load_match
+
+
+hold_while_match:
+    mov x, pins              ; now wait until the pins don't match so we
+    jmp x!=y, load_match    ; dont just trigger the IRQ again
+    jmp hold_while_match
 
 
 ; load_match:

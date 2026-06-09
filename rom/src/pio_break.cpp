@@ -46,6 +46,7 @@ namespace pio_break
             {
       		    pio_sm_get(pio, iter.sm);
                 iter.triggered = true;
+// static inline void pio_sm_set_enabled(PIO pio, uint sm, bool enabled) {
             }
         }
     }
@@ -207,8 +208,13 @@ namespace pio_break
     	    while (pio_sm_is_rx_fifo_empty(pio, iter.sm));
     	    while (!pio_sm_is_rx_fifo_empty(pio, iter.sm))
             {
-      		    pio_sm_get(pio, iter.sm);
+      		    uint32_t value = pio_sm_get(pio, iter.sm);
             }
+            // Disable the SM, reassign the pin to PIO, set input & pullup
+            pio_sm_set_enabled(pio, iter.sm, false);
+            gpio_set_function(PIN_READY, GPIO_FUNC_SIO);
+            gpio_set_dir(PIN_READY, GPIO_IN);
+            gpio_pull_up(PIN_READY);
             break;
         }
     }
@@ -219,6 +225,10 @@ namespace pio_break
         {
             if (iter.address == address)
             {
+                gpio_set_dir(PIN_READY, GPIO_OUT);
+                gpio_set_function(PIN_READY, GPIO_FUNC_PIO0);
+                pio_sm_restart(pio, iter.sm);
+                pio_sm_set_enabled(pio, iter.sm, true);
                 pio_sm_put(pio, iter.sm, address);
             }
             break;

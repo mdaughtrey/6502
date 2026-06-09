@@ -13,7 +13,7 @@
 // ----- //
 
 #define break_wrap_target 0
-#define break_wrap 10
+#define break_wrap 13
 #define break_pio_version 1
 
 static const uint16_t break_program_instructions[] = {
@@ -26,16 +26,19 @@ static const uint16_t break_program_instructions[] = {
     0x8000, //  5: push   noblock
     0xd000, //  6: irq    nowait 0        side 0
     0x80a0, //  7: pull   block
-    0xb842, //  8: nop                    side 1
-    0x8020, //  9: push   block
-    0x0000, // 10: jmp    0
+    0xa0c7, //  8: mov    isr, osr
+    0xb842, //  9: nop                    side 1
+    0x8020, // 10: push   block
+    0xa020, // 11: mov    x, pins
+    0x00a0, // 12: jmp    x != y, 0
+    0x000b, // 13: jmp    11
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program break_program = {
     .instructions = break_program_instructions,
-    .length = 11,
+    .length = 14,
     .origin = -1,
     .pio_version = break_pio_version,
 #if PICO_PIO_VERSION > 0

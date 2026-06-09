@@ -29,7 +29,7 @@ class BackendSession:
     - Event queue for async events
     - Session state (initialized, running, stopped, etc.)
     """
-    CLOCKSPEED = 2000000;
+    CLOCKSPEED = 100;
     
     def __init__(self, serial_conn=None):
         """Initialize a new session.

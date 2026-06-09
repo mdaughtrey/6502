@@ -47,9 +47,26 @@ namespace iohost_read
 
     bool cmd_initialize_test(CommandInput input = CommandInput())
     {
-        cmd_load_pio({"irq_on_match_sync"});
-        cmd_set_isr(true);
-        cmd_push_to_fifo({"0300"});
+        offset = pio_add_program(pio, &irq_on_match_sync_program);
+        smc =  irq_on_match_sync_program_get_default_config(offset);
+        sm = pio_claim_unused_sm(pio, true);
+        sm_config_set_in_pins(&smc, 0);
+        sm_config_set_in_pin_count(&smc, 16);
+//        sm_config_set_sideset_pins(&smc, PIN_READY);
+        sm_config_set_out_shift(&smc, false, false, 16);    // autopull disabled
+        sm_config_set_in_shift(&smc, false, false, 16);      // autopush disabled
+//        sm_config_set_jmp_pin(&smc, PIO1_IRQ_0);
+//        pio_gpio_init(pio, PIN_READY);
+//        assert_ready(false);
+        irq_set_exclusive_handler(PIO0_IRQ_0, iohost_read_isr);
+
+        pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
+        irq_set_enabled(PIO0_IRQ_0, true);
+//        cmd_load_pio({"irq_on_match_sync"});
+        pio_sm_set_enabled(pio, sm, true);
+        pio_sm_put(pio, sm, 0x0300);
+//        cmd_set_isr(true);
+//        cmd_push_to_fifo({"0300"});
         return false;
     }
 
@@ -98,8 +115,8 @@ namespace iohost_read
         sm_config_set_in_pins(&smc, 0);
         sm_config_set_in_pin_count(&smc, 16);
         std::cout << "outShiftRight " << outShiftRight << " inShiftRight " << inShiftRight << std::endl;
-        sm_config_set_out_shift(&smc, outShiftRight, false, 16);    // autopull disabled
-        sm_config_set_in_shift(&smc, inShiftRight, false, 16);      // autopush disabled
+//        sm_config_set_out_shift(&smc, outShiftRight, false, 16);    // autopull disabled
+//        sm_config_set_in_shift(&smc, inShiftRight, false, 16);      // autopush disabled
         pio_sm_init(pio, sm, offset, &smc);
         // Push pattern into OSR
         irq_set_exclusive_handler(PIO0_IRQ_0, iohost_read_isr);
@@ -140,7 +157,7 @@ namespace iohost_read
         }
         uint16_t value = std::stoi(input[0], nullptr, 16);
         std::cout << "FIFO Pushing " << std::hex << std::setw(4) << std::setfill('0') << value << std::endl;
-        pio_sm_put_blocking(pio, sm, value);
+        pio_sm_put(pio, sm, value);
         std::cout << "Pushed" << std::endl;
         return false;
     }
