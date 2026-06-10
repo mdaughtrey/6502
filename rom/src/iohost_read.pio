@@ -60,7 +60,7 @@ load_match:
 wait_for_match:
     mov y, pins     ; load pins
     jmp x!=y, wait_for_match  ; loop while no match
-    irq nowait 0      ; wait for interrupt completion
+    irq nowait 0      ; do not wait for interrupt completion
 hold_while_match:
     mov y, pins
     jmp x!=y, wait_for_match  ; loop while match
