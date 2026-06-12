@@ -51,7 +51,7 @@ namespace rom_ram
         {NULL, {0} }
     };
 
-    std::vector<uint8_t> read_memory(uint32_t address, uint32_t length);
+    std::vector<uint8_t> read_memory(uint32_t address, uint32_t length, bool manage_ready_pin);
     std::string dump_memory(uint16_t addr, uint16_t length);
     void write_to_memory(uint8_t * data, uint32_t length, uint16_t target_address);
     
@@ -85,19 +85,28 @@ namespace rom_ram
         return false;
     }
 
-    std::vector<uint8_t> read_memory(uint32_t address, uint32_t length)
+    std::vector<uint8_t> read_memory(uint32_t address, uint32_t length, bool manage_ready_pin)
     {
         std::vector<uint8_t> data(length, 0);
         bool be_low = false;
-        if (!gpioc_hilo_in_get() & cmd_io::BE_MASK)
+        if (true == manage_ready_pin)
         {
-            be_low = true;
-        }
+            if (!gpioc_hilo_in_get() & cmd_io::BE_MASK)
+            {
+                be_low = true;
+            }
 
-        if (!be_low)
+            if (!be_low)
+            {
+                gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
+            }
+        }
+        else
         {
             gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         }
+        sleep_ms(1000);
+
 
         uint64_t mask = cmd_io::ADDR_MASK | cmd_io::RW_MASK;
         gpio_set_dir_masked64(mask, mask);
@@ -116,7 +125,14 @@ namespace rom_ram
             iter++;
         }
         gpio_set_dir_masked64(mask, 0);
-        if (!be_low)
+        if (true == manage_ready_pin)
+        {
+            if (!be_low)
+            {
+                gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+            }
+        }
+        else
         {
             gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         }
@@ -126,7 +142,7 @@ namespace rom_ram
     std::string dump_memory(uint16_t address, uint16_t length)
     {
         std::stringstream linetext;
-        std::vector<uint8_t> data = read_memory(address, length);
+        std::vector<uint8_t> data = read_memory(address, length, false);
 
         uint16_t lines = (length + 15) / 16;
 

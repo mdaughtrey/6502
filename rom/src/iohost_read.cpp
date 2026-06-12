@@ -9,6 +9,7 @@
 #include <iohost_read.pio.h>
 #include <pin_defs.h>
 #include <rom_ram_internal.h>
+#include <log_queue.h>
 
 namespace iohost_read
 {
@@ -52,26 +53,33 @@ namespace iohost_read
 		smc = irq_on_match_sync_program_get_default_config(offset);
 
 		sm = pio_claim_unused_sm(pio, true);
+		VERBOSE("Claimed sm %u", sm);
 
 		// Configure BEFORE init
 		sm_config_set_in_pins(&smc, 0);
-		sm_config_set_in_pin_count(&smc, 16);
-		sm_config_set_out_shift(&smc, false, false, 16);
-		sm_config_set_in_shift(&smc, false, false, 16);
+//		sm_config_set_in_pin_count(&smc, 16);
+		sm_config_set_jmp_pin(&smc, PIN_RW);
+	    sm_config_set_out_shift(&smc, false, false, 32);
+		sm_config_set_in_shift(&smc, false, false, 32);
+		sm_config_set_clkdiv(&smc, 1.0f);
 
 		// Initialize SM
 		pio_sm_init(pio, sm, offset, &smc);
+		VERBOSE("initialized sm");
 
 		// RP2350 interrupt routing
 		irq_set_exclusive_handler(PIO0_IRQ_0, iohost_read_isr);
 		pio_set_irqn_source_enabled(pio, 0, pis_interrupt0, true);
 		irq_set_enabled(PIO0_IRQ_0, true);
+		VERBOSE("interrupts set");
 
 		// Start SM
 		pio_sm_set_enabled(pio, sm, true);
+		VERBOSE("sm started");
 
 		// Initial OSR value
 		pio_sm_put(pio, sm, 0x0300);
+		VERBOSE("Pushed 0x0300");
 
 		return false;
 	}
@@ -243,9 +251,7 @@ namespace iohost_read
 
 	void dump_iohost_memory()
 	{
-        // gpio_put(PIN_READY, 0);
-        sleep_us(100);
-        iohost_buffers = rom_ram::read_memory(BUFFERS_BASE, BUFFERS_LENGTH);
+        iohost_buffers = rom_ram::read_memory(BUFFERS_BASE, BUFFERS_LENGTH, false);
         //gpio_put(PIN_READY, 1);
         std::vector<uint8_t>::const_iterator iter_buffer = iohost_buffers.begin();
         std::vector<std::string>::const_iterator iter_name = buffer_names.begin();

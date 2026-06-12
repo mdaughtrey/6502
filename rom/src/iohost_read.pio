@@ -54,14 +54,23 @@ loop2:
     jmp loop2
 
 .program irq_on_match_sync
-load_match:
-    pull block      ; wait for match data
-    mov x, osr      ; x <- OSR
-wait_for_match:
-    mov y, pins     ; load pins
-    jmp x!=y, wait_for_match  ; loop while no match
-    irq nowait 0      ; do not wait for interrupt completion
-hold_while_match:
-    mov y, pins
-    jmp x!=y, wait_for_match  ; loop while match
-    jmp hold_while_match
+; A0..A15 = GPIO0..GPIO15
+; R/W     = GPIO18 (configured as jmp pin)
+
+; Load desired address from TX FIFO into X
+pull block
+mov x, osr            ; X = desired address
+
+main:
+    ; --- Step 1: Check R/W first ---
+    jmp pin, main          ; if R/W == 1 (read), skip
+
+    ; --- Step 2: Read current address into Y ---
+    mov y, pins            ; Y = A0..A15
+
+    ; --- Step 3: Compare X and Y ---
+    jmp x!=y, main         ; if address != desired, skip
+
+    ; --- Step 4: Write to desired address detected ---
+    irq 0
+    jmp main

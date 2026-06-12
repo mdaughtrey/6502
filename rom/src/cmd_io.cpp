@@ -540,7 +540,7 @@ namespace cmd_io
         memdump_length = std::stoi(input[2], nullptr, 16);
         if (useJSONIO)
         {
-            std::vector<uint8_t> memory = rom_ram::read_memory(memdump_addr, memdump_length);
+            std::vector<uint8_t> memory = rom_ram::read_memory(memdump_addr, memdump_length, false);
             std::cout << "{\"kind\":\"memory_dump\", \"address\": \""
                 << std::hex << std::setw(4) << std::setfill('0') << memdump_addr
                 << "\", \"data\":[";

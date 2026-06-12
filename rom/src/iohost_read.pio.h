@@ -165,26 +165,25 @@ static inline pio_sm_config irq_on_match_sync0_program_get_default_config(uint o
 // ----------------- //
 
 #define irq_on_match_sync_wrap_target 0
-#define irq_on_match_sync_wrap 7
+#define irq_on_match_sync_wrap 6
 #define irq_on_match_sync_pio_version 1
 
 static const uint16_t irq_on_match_sync_program_instructions[] = {
             //     .wrap_target
     0x80a0, //  0: pull   block
     0xa027, //  1: mov    x, osr
-    0xa040, //  2: mov    y, pins
-    0x00a2, //  3: jmp    x != y, 2
-    0xc000, //  4: irq    nowait 0
-    0xa040, //  5: mov    y, pins
-    0x00a2, //  6: jmp    x != y, 2
-    0x0005, //  7: jmp    5
+    0x00c2, //  2: jmp    pin, 2
+    0xa040, //  3: mov    y, pins
+    0x00a2, //  4: jmp    x != y, 2
+    0xc000, //  5: irq    nowait 0
+    0x0002, //  6: jmp    2
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program irq_on_match_sync_program = {
     .instructions = irq_on_match_sync_program_instructions,
-    .length = 8,
+    .length = 7,
     .origin = -1,
     .pio_version = irq_on_match_sync_pio_version,
 #if PICO_PIO_VERSION > 0
