@@ -39,8 +39,8 @@ namespace iohost_read
     void iohost_read_isr()
     {
         isr = true;
-//        pio_sm_set_enabled(pio, sm, false);
-        pio_interrupt_clear(pio0, 0);
+        pio_sm_set_enabled(pio, sm, false);
+        pio_interrupt_clear(pio, 0);
     }
 
     void init()
@@ -57,10 +57,12 @@ namespace iohost_read
 
 		// Configure BEFORE init
 		sm_config_set_in_pins(&smc, 0);
-//		sm_config_set_in_pin_count(&smc, 16);
+		sm_config_set_in_pin_count(&smc, 16);
 		sm_config_set_jmp_pin(&smc, PIN_RW);
-	    sm_config_set_out_shift(&smc, false, false, 32);
-		sm_config_set_in_shift(&smc, false, false, 32);
+//	    sm_config_set_out_shift(&smc, false, false, 32);
+//		sm_config_set_in_shift(&smc, false, false, 32);
+	    sm_config_set_out_shift(&smc, false, false, 16);
+		sm_config_set_in_shift(&smc, false, false, 16);
 		sm_config_set_clkdiv(&smc, 1.0f);
 
 		// Initialize SM
@@ -69,7 +71,7 @@ namespace iohost_read
 
 		// RP2350 interrupt routing
 		irq_set_exclusive_handler(PIO0_IRQ_0, iohost_read_isr);
-		pio_set_irqn_source_enabled(pio, 0, pis_interrupt0, true);
+		pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
 		irq_set_enabled(PIO0_IRQ_0, true);
 		VERBOSE("interrupts set");
 
@@ -141,14 +143,14 @@ namespace iohost_read
             std::cout << "Program not found" << std::endl;
             return false;
         }
-        std::cout << "IOHost offset " << offset << std::endl;
+//        std::cout << "IOHost offset " << offset << std::endl;
         sm = pio_claim_unused_sm(pio, true);
 
         // smc = iohost_read_program_get_default_config(offset);
         smc = iter->second.second(offset);
         sm_config_set_in_pins(&smc, 0);
         sm_config_set_in_pin_count(&smc, 16);
-        std::cout << "outShiftRight " << outShiftRight << " inShiftRight " << inShiftRight << std::endl;
+//        std::cout << "outShiftRight " << outShiftRight << " inShiftRight " << inShiftRight << std::endl;
 //        sm_config_set_out_shift(&smc, outShiftRight, false, 16);    // autopull disabled
 //        sm_config_set_in_shift(&smc, inShiftRight, false, 16);      // autopush disabled
         pio_sm_init(pio, sm, offset, &smc);
@@ -251,7 +253,7 @@ namespace iohost_read
 
 	void dump_iohost_memory()
 	{
-        iohost_buffers = rom_ram::read_memory(BUFFERS_BASE, BUFFERS_LENGTH, false);
+        iohost_buffers = rom_ram::read_memory(BUFFERS_BASE, BUFFERS_LENGTH);
         //gpio_put(PIN_READY, 1);
         std::vector<uint8_t>::const_iterator iter_buffer = iohost_buffers.begin();
         std::vector<std::string>::const_iterator iter_name = buffer_names.begin();
@@ -291,28 +293,32 @@ namespace iohost_read
         {
             std::vector<uint8_t> local_data;
             isr = false;
-            std::cout << "ISR Loop" << std::endl;
-            std::cout << "Reading Buffers" << std::endl;
+//            std::cout << "ISR Loop" << std::endl;
+//            std::cout << "Reading Buffers" << std::endl;
             dump_iohost_memory();
             if ((0xff == iohost_buffers[LIO_SIGNALS]) || (!(iohost_buffers[LIO_SIGNALS] & 0x80)))   // TOHOST_READY
             {
-                std::cout << "Not Ready" << std::endl;
-//                pio_sm_set_enabled(pio, sm, true);
+//                std::cout << "Not Ready" << std::endl;
+//                pio_interrupt_clear(pio, 0);
+                pio_sm_set_enabled(pio, sm, true);
+                pio_sm_init(pio, sm, offset, &smc);
+                pio_sm_set_enabled(pio, sm, true);
+                pio_sm_put(pio, sm, 0x0300);
                 return;
             }
-            std::cout << "Ready" << std::endl;
+//            std::cout << "Ready" << std::endl;
 
             uint8_t head = iohost_buffers[LIO_HEAD];
             uint8_t tail = iohost_buffers[LIO_TAIL];
             if (head == tail)
             {
-                std::cout << "Empty Buffer" << std::endl;
+//                std::cout << "Empty Buffer" << std::endl;
                 pio_sm_set_enabled(pio, sm, true);
                 return;
             }
             while (head != tail)
             {
-                std::cout << "Head " << (int)head << " Tail " << (int)tail << std::endl;
+                VERBOSE("Head %u Tail %u", head, tail);
                 local_data.push_back(iohost_buffers[LIO_DATA+tail]);
                 tail++;
                 tail &= 7;
@@ -321,11 +327,14 @@ namespace iohost_read
             iohost_buffers[LIO_TAIL] = tail;
             // Write back signals and head
             std::cout << "Writing back" << std::endl;
-            gpio_put(PIN_READY, 0);
-            sleep_us(100);
-            rom_ram::write_to_memory(&iohost_buffers[0], 2, BUFFERS_BASE);
-            gpio_put(PIN_READY, 1);
-            std::cout << "Writing back Done" << std::endl;
+            rom_ram::write_memory(&iohost_buffers[0], 2, BUFFERS_BASE);
+            pio_interrupt_clear(pio, 0);
+
+            // Reinit the state machine
+            pio_sm_init(pio, sm, offset, &smc);
+            pio_sm_set_enabled(pio, sm, true);
+ 		    pio_sm_put(pio, sm, 0x0300);
+//            std::cout << "Writing back Done" << std::endl;
 
             std::cout << "Local Data Dump" << std::endl;
             for (auto iter : local_data)

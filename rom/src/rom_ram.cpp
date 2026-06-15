@@ -15,6 +15,7 @@
 #include "ioutils.h"
 // #include "varstacktest.h"
 #include "bus_asserts.h"
+#include "pin_scope.h"
 
 namespace rom_ram
 {
@@ -51,9 +52,9 @@ namespace rom_ram
         {NULL, {0} }
     };
 
-    std::vector<uint8_t> read_memory(uint32_t address, uint32_t length, bool manage_ready_pin);
+    std::vector<uint8_t> read_memory(uint32_t address, uint32_t length);
     std::string dump_memory(uint16_t addr, uint16_t length);
-    void write_to_memory(uint8_t * data, uint32_t length, uint16_t target_address);
+    void write_memory(uint8_t * data, uint32_t length, uint16_t target_address);
     
 
     void init(void)
@@ -85,31 +86,12 @@ namespace rom_ram
         return false;
     }
 
-    std::vector<uint8_t> read_memory(uint32_t address, uint32_t length, bool manage_ready_pin)
+    std::vector<uint8_t> read_memory(uint32_t address, uint32_t length)
     {
         std::vector<uint8_t> data(length, 0);
-        bool be_low = false;
-        if (true == manage_ready_pin)
-        {
-            if (!gpioc_hilo_in_get() & cmd_io::BE_MASK)
-            {
-                be_low = true;
-            }
+        PinScopeBusEnable scope;
+        PinScopeAddressRead scope1;
 
-            if (!be_low)
-            {
-                gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
-            }
-        }
-        else
-        {
-            gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
-        }
-        sleep_ms(1000);
-
-
-        uint64_t mask = cmd_io::ADDR_MASK | cmd_io::RW_MASK;
-        gpio_set_dir_masked64(mask, mask);
         gpio_put(PIN_RW, 1);        // Read
 
         auto iter = data.begin();
@@ -124,25 +106,13 @@ namespace rom_ram
             (*iter) = static_cast<uint8_t>(gpioc_hilo_in_get() >> 40);
             iter++;
         }
-        gpio_set_dir_masked64(mask, 0);
-        if (true == manage_ready_pin)
-        {
-            if (!be_low)
-            {
-                gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
-            }
-        }
-        else
-        {
-            gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
-        }
         return data;
     }
 
     std::string dump_memory(uint16_t address, uint16_t length)
     {
         std::stringstream linetext;
-        std::vector<uint8_t> data = read_memory(address, length, false);
+        std::vector<uint8_t> data = read_memory(address, length);
 
         uint16_t lines = (length + 15) / 16;
 
@@ -263,46 +233,39 @@ namespace rom_ram
         uint8_t program_number = std::stoi(input[1]);
 
         Program * iter = &programs[program_number];
-        write_to_memory(iter->code, iter->length, iter->target);
-        write_to_memory(reinterpret_cast<uint8_t *>(&iter->target), 2, 0xfffc);
+        write_memory(iter->code, iter->length, iter->target);
+        write_memory(reinterpret_cast<uint8_t *>(&iter->target), 2, 0xfffc);
         return false;
     }
 
-    void write_to_memory(uint8_t * data, uint32_t length, uint16_t target_address)
+    void write_memory(uint8_t * data, uint32_t length, uint16_t target_address)
     {
-        bool be_low = false;
-        if (!gpioc_hilo_in_get() & cmd_io::BE_MASK)
-        {
-            be_low = true;
-        }
-
-        if (!be_low)
-        {
-            gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
-        }
-        uint64_t mask = cmd_io::ADDR_MASK | cmd_io::DATA_MASK | cmd_io::RW_MASK;
-        gpio_set_dir_masked64(mask, mask);
+        PinScopeBusEnable scope;
+        PinScopeAddressWrite scope1;
         for (auto ii = 0; ii < length; ii++)
         {
-            bus_asserts::assert_address_bus(target_address + ii);
-            bus_asserts::assert_databus(data[ii]);
+//            std::cout << std::hex << std::setfill('0') << std::setw(4) << target_address + ii << " " << std::setw(2) << static_cast<int>(data[ii]) << std::endl;
+            //bus_asserts::assert_address_bus(target_address + ii);
+            gpio_put_masked64(cmd_io::ADDR_MASK | cmd_io::DATA_MASK, (target_address + ii) | (static_cast<uint64_t>(data[ii]) << PIN_DATA0));
+//			gpio_put(ii + 40, (data & (1 << ii)) ? 1 : 0);
+//            std::cout << "asserted address bus" << std::endl;
+//            bus_asserts::assert_databus(data[ii]);
+//            gpio_put_masked64(cmd_io::DATA_MASK, data[ii]);
+//            std::cout << "asserted data bus" << std::endl;
             sleep_us(1);
             gpio_put(PIN_RW, 0);
+//            std::cout << "asserted rw 0" << std::endl;
             sleep_us(1);
             gpio_put(PIN_RW, 1);
+//            std::cout << "asserted rw 1" << std::endl;
             sleep_us(1);
-        }
-        gpio_set_dir_masked64(mask, 0);
-        if (!be_low)
-        {
-            gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         }
     }
 
     bool cmd_upload_rom_image(CommandInput input = CommandInput())
     {
         printf("Loading %d bytes to %04x...", rom1_bin_len, 0x0000);
-        write_to_memory(rom1_bin, rom1_bin_len, 0x0000);
+        write_memory(rom1_bin, rom1_bin_len, 0x0000);
         printf(" Done.\r\n");
         return false;
     }
@@ -316,14 +279,14 @@ namespace rom_ram
             rom_image[ii] = ii % 256;
         }
 //        while (1)
-        write_to_memory(rom_image, 65536, 0x0000);
+        write_memory(rom_image, 65536, 0x0000);
         printf(" Done.\r\n");
         return false;
     }
 
     
 
-    bool cmd_write_to_memory(CommandInput input = CommandInput())
+    bool cmd_write_memory(CommandInput input = CommandInput())
     {
         if (input.empty())
         {
@@ -331,7 +294,7 @@ namespace rom_ram
         }
         uint16_t addr = std::stoi(input[1], nullptr, 16);
         uint8_t data = std::stoi(input[2], nullptr, 16);
-        write_to_memory(&data, 1, addr);
+        write_memory(&data, 1, addr);
         return false;
     }
 

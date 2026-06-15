@@ -14,6 +14,6 @@ namespace rom_ram
     bool cmd_write_memory(CommandInput);
     bool cmd_upload_rom_image(CommandInput);
     bool cmd_upload_test_image(CommandInput);
-    bool cmd_write_to_memory(CommandInput);
-    std::vector<uint8_t> read_memory(uint32_t address, uint32_t length, bool manage_ready_pin);
+    bool cmd_write_memory(CommandInput);
+    std::vector<uint8_t> read_memory(uint32_t address, uint32_t length);
 }

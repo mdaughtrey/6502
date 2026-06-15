@@ -25,6 +25,7 @@
 #include "bus_asserts.h"
 #include "log_queue.h"
 #include "pio_break.h"
+#include "pin_scope.h"
 
 // `rom1_bin` and `rom1_bin_len` are defined in `src/ioutils.h` (binary data).
 // Declare them `extern` here instead of including the header to avoid multiple
@@ -540,7 +541,7 @@ namespace cmd_io
         memdump_length = std::stoi(input[2], nullptr, 16);
         if (useJSONIO)
         {
-            std::vector<uint8_t> memory = rom_ram::read_memory(memdump_addr, memdump_length, false);
+            std::vector<uint8_t> memory = rom_ram::read_memory(memdump_addr, memdump_length);
             std::cout << "{\"kind\":\"memory_dump\", \"address\": \""
                 << std::hex << std::setw(4) << std::setfill('0') << memdump_addr
                 << "\", \"data\":[";
@@ -713,8 +714,8 @@ namespace cmd_io
 
     bool cmd_upload_rom_image(CommandInput input = CommandInput())
     {
+        PinScopeBusEnable scope;
         uint64_t mask = cmd_io::ADDR_MASK | cmd_io::DATA_MASK | cmd_io::RW_MASK;
-        gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
         gpio_set_dir_masked64(mask, mask);
         for (auto ii = 0; ii < rom1_bin_len; ii++)
         {
@@ -727,7 +728,6 @@ namespace cmd_io
             sleep_us(1);
         }
         gpio_set_dir_masked64(mask, 0);
-        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         return false;
     }
 
