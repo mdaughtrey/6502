@@ -287,61 +287,67 @@ namespace iohost_read
         return false;
 	}
 
+
+    void process_isr()
+    {
+        std::vector<uint8_t> local_data;
+        isr = false;
+//            std::cout << "ISR Loop" << std::endl;
+//            std::cout << "Reading Buffers" << std::endl;
+        dump_iohost_memory();
+        if ((0xff == iohost_buffers[LIO_SIGNALS]) || (!(iohost_buffers[LIO_SIGNALS] & 0x80)))   // TOHOST_READY
+        {
+//                std::cout << "Not Ready" << std::endl;
+//                pio_interrupt_clear(pio, 0);
+            pio_sm_set_enabled(pio, sm, true);
+            pio_sm_init(pio, sm, offset, &smc);
+            pio_sm_set_enabled(pio, sm, true);
+            pio_sm_put(pio, sm, 0x0300);
+            return;
+        }
+//            std::cout << "Ready" << std::endl;
+
+        uint8_t head = iohost_buffers[LIO_HEAD];
+        uint8_t tail = iohost_buffers[LIO_TAIL];
+        if (head == tail)
+        {
+//                std::cout << "Empty Buffer" << std::endl;
+            pio_sm_set_enabled(pio, sm, true);
+            return;
+        }
+        while (head != tail)
+        {
+            VERBOSE("Head %u Tail %u", head, tail);
+            local_data.push_back(iohost_buffers[LIO_DATA+tail]);
+            tail++;
+            tail &= 7;
+        }
+        iohost_buffers[LIO_SIGNALS] &= ~0x80;
+        iohost_buffers[LIO_TAIL] = tail;
+        // Write back signals and head
+        std::cout << "Writing back" << std::endl;
+        rom_ram::write_memory(&iohost_buffers[0], 2, BUFFERS_BASE);
+        pio_interrupt_clear(pio, 0);
+
+        // Reinit the state machine
+        pio_sm_init(pio, sm, offset, &smc);
+        pio_sm_set_enabled(pio, sm, true);
+ 		pio_sm_put(pio, sm, 0x0300);
+//            std::cout << "Writing back Done" << std::endl;
+
+        std::cout << "Local Data Dump" << std::endl;
+        for (auto iter : local_data)
+        {
+            std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)iter << " ";
+        }
+        std::cout << std::endl;
+    }
+
     void loop()
     {
         if (isr)
         {
-            std::vector<uint8_t> local_data;
-            isr = false;
-//            std::cout << "ISR Loop" << std::endl;
-//            std::cout << "Reading Buffers" << std::endl;
-            dump_iohost_memory();
-            if ((0xff == iohost_buffers[LIO_SIGNALS]) || (!(iohost_buffers[LIO_SIGNALS] & 0x80)))   // TOHOST_READY
-            {
-//                std::cout << "Not Ready" << std::endl;
-//                pio_interrupt_clear(pio, 0);
-                pio_sm_set_enabled(pio, sm, true);
-                pio_sm_init(pio, sm, offset, &smc);
-                pio_sm_set_enabled(pio, sm, true);
-                pio_sm_put(pio, sm, 0x0300);
-                return;
-            }
-//            std::cout << "Ready" << std::endl;
-
-            uint8_t head = iohost_buffers[LIO_HEAD];
-            uint8_t tail = iohost_buffers[LIO_TAIL];
-            if (head == tail)
-            {
-//                std::cout << "Empty Buffer" << std::endl;
-                pio_sm_set_enabled(pio, sm, true);
-                return;
-            }
-            while (head != tail)
-            {
-                VERBOSE("Head %u Tail %u", head, tail);
-                local_data.push_back(iohost_buffers[LIO_DATA+tail]);
-                tail++;
-                tail &= 7;
-            }
-            iohost_buffers[LIO_SIGNALS] &= ~0x80;
-            iohost_buffers[LIO_TAIL] = tail;
-            // Write back signals and head
-            std::cout << "Writing back" << std::endl;
-            rom_ram::write_memory(&iohost_buffers[0], 2, BUFFERS_BASE);
-            pio_interrupt_clear(pio, 0);
-
-            // Reinit the state machine
-            pio_sm_init(pio, sm, offset, &smc);
-            pio_sm_set_enabled(pio, sm, true);
- 		    pio_sm_put(pio, sm, 0x0300);
-//            std::cout << "Writing back Done" << std::endl;
-
-            std::cout << "Local Data Dump" << std::endl;
-            for (auto iter : local_data)
-            {
-                std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)iter << " ";
-            }
-            std::cout << std::endl;
+            process_isr();
         }
     }
 

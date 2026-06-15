@@ -10,6 +10,7 @@
 #include <iohost_read.h>
 #include <log_queue.h>
 #include <pio_break.h>
+#include <terminal.h>
 
 int main()
 {
@@ -20,6 +21,7 @@ int main()
     via6522::init();
     iohost_read::init();
     pio_break::init();
+    terminal::init();
     while (1)
     {
         int8_t input = getchar_timeout_us(0);
@@ -31,6 +33,7 @@ int main()
         via6522::loop();
         iohost_read::loop();
         log_queue::loop();
+        terminal::loop();
     }
     return 0;
 }

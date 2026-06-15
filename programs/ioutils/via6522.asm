@@ -16,18 +16,19 @@ SELECTIO = DDRB
 
 ;
 ; Set up a 10ms timer, kicks off an interrupt
+; 0x4e20 = 20000 cycles, at 2MHz that's 10ms. 
 .proc via6522_timer_init
     lda #(ACR_T1A | ACR_T1B)   ; Set Timer1 to free running mode, counting down from T1C/T1CH
     sta ACR             ; Store to Aux Control Register
     ; ; lda #(IER_TIMER1 | IER_SET)  ; Enable interrupt
     ; sta IER             ; ...
-    lda #<$00ff
+    lda #<$4e20
     sta T1LL            ; ...
-    lda #>$00ff
+    lda #>$4e20
     sta T1LH            ; ...
 ;        lda #<$00ff
 ;    sta T1CL            ; ...
-    lda #>$00ff
+    lda #>$4e20
     sta T1CH            ; ...
     rts
 .endproc

@@ -11,6 +11,7 @@
 #include "via6522.h"
 #include "iohost_read.h"
 #include "pio_break.h"
+#include "terminal.h"
 // #include "debugger.h"
 
 namespace menu
@@ -40,6 +41,7 @@ extern Command commands_rom_ram[];
 extern Command commands_via6522[];
 extern Command commands_debugger[];
 extern Command commands_iohost[];
+extern Command commands_terminal[];
 Command * command_set = commands_top;
 Command * current_command = NULL;
 // std::string accumulator = "";
@@ -51,6 +53,7 @@ Command commands_top[] = {
 {'p', "PIO Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_iohost; return false; }},
 
 {'r', "ROM/RAM Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_rom_ram; return false; }},
+{'t', "Terminal Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_terminal; return false; }},
 {'v', "VIA 6522 Menu", Validator(""), [](CommandInput) -> bool{ command_set = commands_via6522; return false; }},
 {0x01, "", Validator(""), [](CommandInput input)->bool{ return false; } }
 };
@@ -151,6 +154,12 @@ Command commands_iohost[] = {
     {'R', "Reset PIO", Validator(), iohost_read::cmd_reset_pio},
     {'s', "Set IN Shift Direction (l/r)", Validator("[lr]", "l | r"), iohost_read::cmd_set_in_shift},
     {'S', "Set OUT Shift Direction (l/r)", Validator("[lr]", "l | r"), iohost_read::cmd_set_out_shift},
+    {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
+    {0x01, "", Validator(""), [](CommandInput input)->bool{ return false; } }
+};
+
+Command commands_terminal[] = {
+    {'?', "help", Validator(""),cmd_help },
     {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
     {0x01, "", Validator(""), [](CommandInput input)->bool{ return false; } }
 };
