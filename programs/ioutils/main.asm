@@ -33,7 +33,7 @@ COUNTER: .res 1
 .proc main
     sei
 ;    jsr var_init
-;    jsr via6522_init
+    jsr via6522_init
     jsr iohost_init
 ;    jsr chaser_init
 ;    jsr via6522_timer_init

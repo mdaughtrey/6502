@@ -169,7 +169,7 @@ class BackendSession:
     def start_serial_listener(self) -> bool:
         """Start background serial listener if a serial connection exists."""
         if self.serial_conn is None:
-            self.logger.debug("Serial listener start skipped: no serial connection")
+            self.logger.error("Serial listener start skipped: no serial connection")
             return False
 
         if self.serial_listener is None:

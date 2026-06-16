@@ -25,10 +25,10 @@ BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
     lda #0
     sta LIO_SIGNALS
     sta HIO_SIGNALS
-    sta LIO_HEAD
-    sta LIO_TAIL
     sta HIO_HEAD
     sta HIO_TAIL
+    sta LIO_HEAD
+    sta LIO_TAIL
     rts
 .endproc
 
@@ -44,11 +44,11 @@ BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
     ldx LIO_HEAD
     sta LIO_BUFFER, x   ; Store byte in buffer at head index
     inx
-    txa
+    txa 
     and #BUFFER_MASK
     cmp LIO_TAIL        ; Check if head + 1 == tail (buffer full)
     beq @buffer_full
-    stx LIO_HEAD        ; all good, store head and return
+    sta LIO_HEAD        ; all good, store head and return
     lda #TOHOST_READY
     sta LIO_SIGNALS     ; Signal to host that data is ready
     sec
@@ -58,6 +58,29 @@ BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
     rts
 .endproc
 
+; fake host
+; returns data in A, C if buffer is empty
+.proc iohost_tx_drain
+    lda LIO_SIGNALS
+    and #TOHOST_READY
+    beq @buffer_empty
+    and #~TOHOST_READY & $ff
+    sta LIO_SIGNALS     ; Clear TOHOST_READY to indicate we've read the byte
+    ldx LIO_TAIL
+    ldy LIO_BUFFER, x
+    inx
+    txa
+    and #BUFFER_MASK
+    sta LIO_TAIL
+    tya
+    rts
+@buffer_empty:
+    sec
+    rts
+
+.endproc
+
+
 .proc iohost_rx    ; Returns:
     ;   A: byte received from host, or 0 if buffer is empty
     ;   C: 1 if byte was received, 0 if buffer is empty
@@ -66,6 +89,7 @@ BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
 .endproc
 
 .proc iohost_loop
+;    jsr iohost_tx_drain
     lda #'M'
     jsr iohost_tx
     rts
