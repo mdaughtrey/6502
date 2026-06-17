@@ -5,13 +5,13 @@
 #include <map>
 #include <string>
 #include <iostream>
-#include <iohost_read.h>
-#include <iohost_read.pio.h>
+#include <iohost.h>
+#include <iohost.pio.h>
 #include <pin_defs.h>
 #include <rom_ram_internal.h>
 #include <log_queue.h>
 
-namespace iohost_read
+namespace iohost
 {
     typedef std::pair<const pio_program *, pio_sm_config (*)(uint)> Program;
     typedef std::map<std::string, Program> ProgramMap;
@@ -36,7 +36,7 @@ namespace iohost_read
     bool outShiftRight = false;
     std::vector<uint8_t> iohost_buffers;
 
-    void iohost_read_isr()
+    void iohost_isr()
     {
         isr = true;
         pio_sm_set_enabled(pio, sm, false);
@@ -59,8 +59,6 @@ namespace iohost_read
 		sm_config_set_in_pins(&smc, 0);
 		sm_config_set_in_pin_count(&smc, 16);
 		sm_config_set_jmp_pin(&smc, PIN_RW);
-//	    sm_config_set_out_shift(&smc, false, false, 32);
-//		sm_config_set_in_shift(&smc, false, false, 32);
 	    sm_config_set_out_shift(&smc, false, false, 16);
 		sm_config_set_in_shift(&smc, false, false, 16);
 		sm_config_set_clkdiv(&smc, 1.0f);
@@ -70,7 +68,7 @@ namespace iohost_read
 		VERBOSE("initialized sm");
 
 		// RP2350 interrupt routing
-		irq_set_exclusive_handler(PIO0_IRQ_0, iohost_read_isr);
+		irq_set_exclusive_handler(PIO0_IRQ_0, iohost_isr);
 		pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
 		irq_set_enabled(PIO0_IRQ_0, true);
 		VERBOSE("interrupts set");
@@ -96,7 +94,7 @@ namespace iohost_read
 //        sm_config_set_in_pin_count(&smc, 16);
 //        sm_config_set_out_shift(&smc, false, false, 16);    // autopull disabled
 //        sm_config_set_in_shift(&smc, false, false, 16);      // autopush disabled
-////        irq_set_exclusive_handler(PIO0_IRQ_0, iohost_read_isr);
+////        irq_set_exclusive_handler(PIO0_IRQ_0, iohost_isr);
 //        pio_sm_init(pio, sm, offset, &smc);
 //
 //        pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
@@ -146,7 +144,7 @@ namespace iohost_read
 //        std::cout << "IOHost offset " << offset << std::endl;
         sm = pio_claim_unused_sm(pio, true);
 
-        // smc = iohost_read_program_get_default_config(offset);
+        // smc = iohost_program_get_default_config(offset);
         smc = iter->second.second(offset);
         sm_config_set_in_pins(&smc, 0);
         sm_config_set_in_pin_count(&smc, 16);
@@ -155,7 +153,7 @@ namespace iohost_read
 //        sm_config_set_in_shift(&smc, inShiftRight, false, 16);      // autopush disabled
         pio_sm_init(pio, sm, offset, &smc);
         // Push pattern into OSR
-        irq_set_exclusive_handler(PIO0_IRQ_0, iohost_read_isr);
+        irq_set_exclusive_handler(PIO0_IRQ_0, iohost_isr);
 //        pio_sm_set_enabled(pio, sm, true);
         pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
         return false;
@@ -225,28 +223,15 @@ namespace iohost_read
         return false;
     }
 
-    typedef enum 
-    {
-        LIO_SIGNALS = 0,
-        LIO_TAIL,
-        LIO_HEAD,
-        HIO_SIGNALS,
-        HIO_TAIL,
-        HIO_HEAD,
-        LIO_DATA,
-        HIO_DATA = LIO_DATA + 8,
-        BUFFERS_LENGTH = HIO_DATA + 8,
-        BUFFERS_BASE = 0x0300
-    }BufferAt;
 
 	std::vector<std::string> buffer_names = {
         "LIO_SIGNALS",
         "LIO_TAIL",
         "LIO_HEAD",
+        "LIO_DATA",
         "HIO_SIGNALS",
         "HIO_TAIL",
         "HIO_HEAD",
-        "LIO_DATA",
         "HIO_DATA"
 	};
 	
@@ -254,6 +239,7 @@ namespace iohost_read
 	void dump_iohost_memory()
 	{
         iohost_buffers = rom_ram::read_memory(BUFFERS_BASE, BUFFERS_LENGTH);
+
         //gpio_put(PIN_READY, 1);
         std::vector<uint8_t>::const_iterator iter_buffer = iohost_buffers.begin();
         std::vector<std::string>::const_iterator iter_name = buffer_names.begin();
@@ -261,17 +247,17 @@ namespace iohost_read
 		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // LIO_SIGNALS
 		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // LIO_TAIL
 		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // LIO_HEAD
-		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // HIO_SIGNALS
-		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // HIO_TAIL
-		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // HIO_HEAD
-
         // LIO_DATA
         std::cout << std::endl << *iter_name++;
         for (int ii = 0; ii < 8; ii++)
         {
             std::cout << " " << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++);
         }
+        std::cout << std::endl;
 
+		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // HIO_SIGNALS
+		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // HIO_TAIL
+		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // HIO_HEAD
         // HIO_DATA
         std::cout << std::endl << *iter_name++;
         for (int ii = 0; ii < 8; ii++)
@@ -283,6 +269,18 @@ namespace iohost_read
 
 	bool cmd_dump_iohost_memory(CommandInput input = CommandInput())
 	{
+//        std::cout << "LIO_SIGNALS " << LIO_SIGNALS << std::endl;
+//        std::cout << "LIO_TAIL " << LIO_TAIL << std::endl;
+//        std::cout << "LIO_HEAD " << LIO_HEAD << std::endl;
+//        std::cout << "LIO_DATA " << LIO_DATA << std::endl;
+//        std::cout << "LIO_LENGTH " << LIO_LENGTH << std::endl;
+//        std::cout << "HIO_SIGNALS " << HIO_SIGNALS << std::endl;
+//        std::cout << "HIO_TAIL " << HIO_TAIL << std::endl;
+//        std::cout << "HIO_HEAD " << HIO_HEAD << std::endl;
+//        std::cout << "HIO_DATA " << HIO_DATA << std::endl;
+//        std::cout << "HIO_LENGTH " << HIO_LENGTH << std::endl;
+//        std::cout << "BUFFERS_LENGTH " << BUFFERS_LENGTH << std::endl;
+//        std::cout << "BUFFERS_BASE " << BUFFERS_BASE << std::endl;
         dump_iohost_memory();
         return false;
 	}
@@ -299,7 +297,6 @@ namespace iohost_read
         {
 //                std::cout << "Not Ready" << std::endl;
 //                pio_interrupt_clear(pio, 0);
-            pio_sm_set_enabled(pio, sm, true);
             pio_sm_init(pio, sm, offset, &smc);
             pio_sm_set_enabled(pio, sm, true);
             pio_sm_put(pio, sm, 0x0300);
@@ -352,5 +349,5 @@ namespace iohost_read
     }
 
 
-} // namespace iohost_read
+} // namespace iohost
 

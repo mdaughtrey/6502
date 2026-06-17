@@ -9,7 +9,7 @@
 #include "rom_ram.h"
 #include "validator.h"
 #include "via6522.h"
-#include "iohost_read.h"
+#include "iohost.h"
 #include "pio_break.h"
 #include "terminal.h"
 // #include "debugger.h"
@@ -143,23 +143,24 @@ Command commands_debugger[] = {
 
 Command commands_iohost[] = {
     {'?', "help", Validator(""),cmd_help },
-	{'d', "Dump IOHost Memory", Validator(""), iohost_read::cmd_dump_iohost_memory},	
-    {'i', "Initialize test", Validator(""), iohost_read::cmd_initialize_test},
-    {'l', "List PIO Programs", Validator(""), iohost_read::cmd_list_programs},
-    {'L', "Load PIO", Validator("(\\w+)","Program Name: "), iohost_read::cmd_load_pio},
-    {'p', "Push value to TX FIFO", Validator("[0-9a-fA-F]{4}", "HHHH"), iohost_read::cmd_push_to_fifo},
-    {'q', "Enable IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_set_isr(true); return false; }},
-    {'Q', "Disable IRQ", Validator(""), [](CommandInput) -> bool { iohost_read::cmd_set_isr(false); return false; }},
-    {'r', "Read from RX FIFO", Validator(), iohost_read::cmd_read_from_fifo},
-    {'R', "Reset PIO", Validator(), iohost_read::cmd_reset_pio},
-    {'s', "Set IN Shift Direction (l/r)", Validator("[lr]", "l | r"), iohost_read::cmd_set_in_shift},
-    {'S', "Set OUT Shift Direction (l/r)", Validator("[lr]", "l | r"), iohost_read::cmd_set_out_shift},
+	{'d', "Dump IOHost Memory", Validator(""), iohost::cmd_dump_iohost_memory},	
+    {'i', "Initialize test", Validator(""), iohost::cmd_initialize_test},
+    {'l', "List PIO Programs", Validator(""), iohost::cmd_list_programs},
+    {'L', "Load PIO", Validator("(\\w+)","Program Name: "), iohost::cmd_load_pio},
+    {'p', "Push value to TX FIFO", Validator("[0-9a-fA-F]{4}", "HHHH"), iohost::cmd_push_to_fifo},
+    {'q', "Enable IRQ", Validator(""), [](CommandInput) -> bool { iohost::cmd_set_isr(true); return false; }},
+    {'Q', "Disable IRQ", Validator(""), [](CommandInput) -> bool { iohost::cmd_set_isr(false); return false; }},
+    {'r', "Read from RX FIFO", Validator(), iohost::cmd_read_from_fifo},
+    {'R', "Reset PIO", Validator(), iohost::cmd_reset_pio},
+    {'s', "Set IN Shift Direction (l/r)", Validator("[lr]", "l | r"), iohost::cmd_set_in_shift},
+    {'S', "Set OUT Shift Direction (l/r)", Validator("[lr]", "l | r"), iohost::cmd_set_out_shift},
     {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
     {0x01, "", Validator(""), [](CommandInput input)->bool{ return false; } }
 };
 
 Command commands_terminal[] = {
     {'?', "help", Validator(""),cmd_help },
+    {'i', "Interactive Terminal", Validator(""), terminal::cmd_set_interactive},
     {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
     {0x01, "", Validator(""), [](CommandInput input)->bool{ return false; } }
 };
@@ -167,7 +168,11 @@ Command commands_terminal[] = {
 void handle(uint8_t input)
 {
     const char blank_line[] = "\r                                            \r%s> %s";
-//    printf("Handle state %d input %c\r\n", state, input);
+    if (terminal::active())
+    {
+        terminal::input(input);
+        return;
+    }
     if (INTERACTIVE_INPUT == state)
     {
         if (input == 0x0d)

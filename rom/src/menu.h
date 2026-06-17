@@ -7,7 +7,8 @@ namespace menu
     typedef enum
     {
         COMMAND,
-        INTERACTIVE_INPUT
+        INTERACTIVE_INPUT,
+        TERMINAL_INPUT
     }InputState;
 
     void handle(uint8_t input);

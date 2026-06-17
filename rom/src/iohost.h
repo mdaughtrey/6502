@@ -1,9 +1,9 @@
-#ifndef IOHOST_READ_H
-#define IOHOST_READ_H
+#ifndef IOHOST_H
+#define IOHOST_H
 
 #include "types.h"
 
-namespace iohost_read
+namespace iohost
 {
     void init();
     void loop();
@@ -18,7 +18,23 @@ namespace iohost_read
     bool cmd_initialize_test(CommandInput);
 	bool cmd_dump_iohost_memory(CommandInput);
     bool cmd_terminal_mode(CommandInput);
+
+    typedef enum 
+    {
+        LIO_SIGNALS = 0,
+        LIO_TAIL,
+        LIO_HEAD,
+        LIO_DATA,
+        LIO_LENGTH = LIO_DATA + 8,
+        HIO_SIGNALS = LIO_LENGTH,
+        HIO_TAIL,
+        HIO_HEAD,
+        HIO_DATA,
+        HIO_LENGTH = HIO_DATA + 8 - LIO_LENGTH,
+        BUFFERS_LENGTH = HIO_DATA + 8,
+        BUFFERS_BASE = 0x0300
+    }BufferAt;
 }
 
 
-#endif //  IOHOST_READ_H
+#endif //  IOHOST_H

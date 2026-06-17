@@ -7,7 +7,7 @@
 #include <rom_ram.h>
 #include <via6522.h>
 #include <menu.h>
-#include <iohost_read.h>
+#include <iohost.h>
 #include <log_queue.h>
 #include <pio_break.h>
 #include <terminal.h>
@@ -19,7 +19,7 @@ int main()
     cmd_io::init();
     rom_ram::init();
     via6522::init();
-    iohost_read::init();
+    iohost::init();
     pio_break::init();
     terminal::init();
     while (1)
@@ -31,7 +31,7 @@ int main()
         }
         cmd_io::loop();
         via6522::loop();
-        iohost_read::loop();
+        iohost::loop();
         log_queue::loop();
         terminal::loop();
     }
