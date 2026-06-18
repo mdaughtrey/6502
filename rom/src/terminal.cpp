@@ -26,6 +26,7 @@ namespace terminal
         ONE_ESC
     }TerminalState;
 
+
     TerminalState state = INACTIVE;
     PIO pio = pio0;
     pio_sm_config smc;
@@ -101,7 +102,7 @@ namespace terminal
 
     void input(uint8_t input)
     {
-        std::cout << std::hex << (int)input << std::endl;
+//        std::cout << std::hex << (int)input << std::endl;
         switch (input)
         {
             case 0x1b: 
@@ -123,6 +124,7 @@ namespace terminal
                 {
                     state = INTERACTIVE;
                 }
+                write_buffer(input);
                 break;
         }
     }
@@ -133,7 +135,9 @@ namespace terminal
         std::vector<uint8_t> local_data;
         isr = false;
         terminal_buffers = rom_ram::read_memory(BUFFERS_BASE, LIO_LENGTH);
-        if ((0xff == terminal_buffers[LIO_SIGNALS]) || (!(terminal_buffers[LIO_SIGNALS] & 0x80)))   // TOHOST_READY
+        BufferSet * buffer_set = reinterpret_cast<BufferSet*>(terminal_buffers.data());
+
+        if (!(buffer_set[0].signals & 0x80))
         {
             pio_sm_init(pio, sm, offset, &smc);
             pio_sm_set_enabled(pio, sm, true);
@@ -141,8 +145,8 @@ namespace terminal
             return;
         }
 
-        uint8_t head = terminal_buffers[LIO_HEAD];
-        uint8_t tail = terminal_buffers[LIO_TAIL];
+        uint8_t & head = buffer_set[0].head;
+        uint8_t & tail = buffer_set[0].tail;
         if (head == tail)
         {
             pio_sm_set_enabled(pio, sm, true);
@@ -150,12 +154,11 @@ namespace terminal
         }
         while (head != tail)
         {
-            local_data.push_back(terminal_buffers[LIO_DATA+tail]);
-            tail++;
+            local_data.push_back(buffer_set[0].data[tail++]);
             tail &= 7;
         }
-        terminal_buffers[LIO_SIGNALS] &= ~0x80;
-        terminal_buffers[LIO_TAIL] = tail;
+        buffer_set[0].signals &= ~0x80;
+//        terminal_buffers[LIO_TAIL] = tail;
         // Write back signals and head
         rom_ram::write_memory(&terminal_buffers[0], 2, BUFFERS_BASE);
         pio_interrupt_clear(pio, 0);
@@ -165,7 +168,6 @@ namespace terminal
         pio_sm_set_enabled(pio, sm, true);
  		pio_sm_put(pio, sm, 0x0300);
 
-
         for (auto iter : local_data)
         {
             std::cout << static_cast<char>(iter) << std::flush;
@@ -174,7 +176,22 @@ namespace terminal
 
     void write_buffer(uint8_t data)
     {
-        // TODO rearrange buffer
+        terminal_buffers = rom_ram::read_memory(BUFFERS_BASE + HIO_BASE, LIO_LENGTH);
+        BufferSet * buffer_set = reinterpret_cast<BufferSet*>(terminal_buffers.data());
+        uint8_t & signals(buffer_set[0].signals);
+        uint8_t head = buffer_set[0].head;
+        uint8_t & tail(buffer_set[0].tail);
+
+        buffer_set[0].data[head++] = data;
+        head &= 7;
+        if (head == tail)
+        {
+            printf("\r\n*** Tx Buffer Full *** \r\n");
+            sleep_ms(1000);
+            return;
+        }
+        buffer_set[0].head = head;
+        buffer_set[0].signals |= 0x80;
     }
 
     void loop(void)

@@ -26,6 +26,7 @@ namespace iohost
         LIO_HEAD,
         LIO_DATA,
         LIO_LENGTH = LIO_DATA + 8,
+        HIO_BASE = LIO_LENGTH,
         HIO_SIGNALS = LIO_LENGTH,
         HIO_TAIL,
         HIO_HEAD,
@@ -34,6 +35,14 @@ namespace iohost
         BUFFERS_LENGTH = HIO_DATA + 8,
         BUFFERS_BASE = 0x0300
     }BufferAt;
+
+    typedef struct
+    {
+        uint8_t signals;
+        uint8_t tail;
+        uint8_t head;
+        uint8_t data[8];
+    }BufferSet;
 }
 
 

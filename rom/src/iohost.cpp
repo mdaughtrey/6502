@@ -239,32 +239,23 @@ namespace iohost
 	void dump_iohost_memory()
 	{
         iohost_buffers = rom_ram::read_memory(BUFFERS_BASE, BUFFERS_LENGTH);
+        BufferSet * buffer_set = reinterpret_cast<BufferSet*>(iohost_buffers.data());
 
-        //gpio_put(PIN_READY, 1);
-        std::vector<uint8_t>::const_iterator iter_buffer = iohost_buffers.begin();
-        std::vector<std::string>::const_iterator iter_name = buffer_names.begin();
+        printf("%02x LIO_SIGNALS\r\n%02x LIO_TAIL\r\n%02x LIO_HEAD\r\n", buffer_set[0].signals, buffer_set[0].tail, buffer_set[0].head);
 
-		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // LIO_SIGNALS
-		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // LIO_TAIL
-		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // LIO_HEAD
-        // LIO_DATA
-        std::cout << std::endl << *iter_name++;
         for (int ii = 0; ii < 8; ii++)
         {
-            std::cout << " " << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++);
+            printf("%02x ", buffer_set[0].data[ii]);
         }
-        std::cout << std::endl;
 
-		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // HIO_SIGNALS
-		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // HIO_TAIL
-		std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++) << " " << *iter_name++ << std::endl; // HIO_HEAD
-        // HIO_DATA
-        std::cout << std::endl << *iter_name++;
+        printf("\r\n\r\n%02x HIO_SIGNALS\r\n%02x HIO_TAIL\r\n%02x HIO_HEAD\r\n", buffer_set[0].signals, buffer_set[0].tail, buffer_set[0].head);
+
         for (int ii = 0; ii < 8; ii++)
         {
-            std::cout << " " << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*iter_buffer++);
+            printf("%02x ", buffer_set[0].data[ii]);
         }
-        std::cout << std::endl;
+        printf("\r\n");
+
 	}
 
 	bool cmd_dump_iohost_memory(CommandInput input = CommandInput())

@@ -60,6 +60,28 @@ BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
     rts
 .endproc
 
+.proc iohost_rx_fill
+    ; A: byte to send to host
+    ; Returns:
+    ;   C: 1 if byte was sent, 0 if buffer is full
+    ;   LIO_BUFFER updated with byte if sent
+    ldx HIO_HEAD
+    sta HIO_BUFFER, x   ; Store byte in buffer at head index
+    inx
+    txa 
+    and #BUFFER_MASK
+    cmp HIO_TAIL        ; Check if head + 1 == tail (buffer full)
+    beq @buffer_full
+    sta HIO_HEAD        ; all good, store head and return
+    lda #FROMHOST_READY
+    sta HIO_SIGNALS     ; Signal to host that data is ready
+    sec
+    rts
+@buffer_full:    ; Buffer is full, clear TX_READY and return
+    clc
+    rts
+.endproc
+
 .proc iohost_rx
     ; Returns:
     ;   A: byte received from host
@@ -73,6 +95,7 @@ BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
     txa
     and #BUFFER_MASK
     sta HIO_TAIL        ; Store updated tail index
+    lda HIO_SIGNALS
     and #~FROMHOST_READY & $ff
     sta HIO_SIGNALS     ; Clear FROMHOST_READY to indicate we've read the byte
     tya
@@ -108,9 +131,11 @@ BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
 
 .proc iohost_loop
 ;    jsr iohost_tx_drain
-    lda #'M'
-;    jsr iohost_rx
-;    bcs @no_data
+;    lda #'M'
+;    jsr iohost_rx_fill
+;
+    jsr iohost_rx
+    bcc @no_data
     jsr iohost_tx
 @no_data:
     rts
