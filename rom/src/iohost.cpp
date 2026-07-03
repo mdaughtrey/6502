@@ -34,7 +34,12 @@ namespace iohost
     int sm = 0;
     bool inShiftRight = false;
     bool outShiftRight = false;
-    std::vector<uint8_t> iohost_buffers;
+//    std::vector<uint8_t> iohost_buffers;
+//    std::vector<uint8_t> lio_buffers;
+//    std::vector<uint8_t> hio_buffers;
+    BufferSet lio;
+    BufferSet hio;
+//
 
     void iohost_isr()
     {
@@ -45,6 +50,8 @@ namespace iohost
 
     void init()
     {
+        read_lio_memory();
+        read_hio_memory();
     }
 
 	bool cmd_initialize_test(CommandInput input = CommandInput())
@@ -224,35 +231,39 @@ namespace iohost
     }
 
 
-	std::vector<std::string> buffer_names = {
-        "LIO_SIGNALS",
-        "LIO_TAIL",
-        "LIO_HEAD",
-        "LIO_DATA",
-        "HIO_SIGNALS",
-        "HIO_TAIL",
-        "HIO_HEAD",
-        "HIO_DATA"
-	};
+//	std::vector<std::string> buffer_names = {
+//        "LIO_SIGNALS",
+//        "LIO_TAIL",
+//        "LIO_HEAD",
+//        "LIO_DATA",
+//        "LIO_LENGTH",
+//        "HIO_BASE",
+//        "HIO_SIGNALS",
+//        "HIO_TAIL",
+//        "HIO_HEAD",
+//        "HIO_DATA",
+//        "HIO_LENGTH"
+//	};
 	
 
 	void dump_iohost_memory()
 	{
-        iohost_buffers = rom_ram::read_memory(BUFFERS_BASE, BUFFERS_LENGTH);
-        BufferSet * buffer_set = reinterpret_cast<BufferSet*>(iohost_buffers.data());
+//        iohost_buffers = rom_ram::read_memory(BUFFERS_BASE, BUFFERS_LENGTH);
+        read_lio_memory();
+        read_hio_memory();
 
-        printf("%02x LIO_SIGNALS\r\n%02x LIO_TAIL\r\n%02x LIO_HEAD\r\n", buffer_set[0].signals, buffer_set[0].tail, buffer_set[0].head);
+        printf("%02x LIO_SIGNALS\r\n%02x LIO_TAIL\r\n%02x LIO_HEAD\r\n", lio.signals, lio.tail, lio.head);
 
         for (int ii = 0; ii < 8; ii++)
         {
-            printf("%02x ", buffer_set[0].data[ii]);
+            printf("%02x ", lio.data[ii]);
         }
 
-        printf("\r\n\r\n%02x HIO_SIGNALS\r\n%02x HIO_TAIL\r\n%02x HIO_HEAD\r\n", buffer_set[0].signals, buffer_set[0].tail, buffer_set[0].head);
+        printf("\r\n\r\n%02x HIO_SIGNALS\r\n%02x HIO_TAIL\r\n%02x HIO_HEAD\r\n", hio.signals, hio.tail, hio.head);
 
         for (int ii = 0; ii < 8; ii++)
         {
-            printf("%02x ", buffer_set[0].data[ii]);
+            printf("%02x ", hio.data[ii]);
         }
         printf("\r\n");
 
@@ -260,22 +271,46 @@ namespace iohost
 
 	bool cmd_dump_iohost_memory(CommandInput input = CommandInput())
 	{
-//        std::cout << "LIO_SIGNALS " << LIO_SIGNALS << std::endl;
-//        std::cout << "LIO_TAIL " << LIO_TAIL << std::endl;
-//        std::cout << "LIO_HEAD " << LIO_HEAD << std::endl;
-//        std::cout << "LIO_DATA " << LIO_DATA << std::endl;
-//        std::cout << "LIO_LENGTH " << LIO_LENGTH << std::endl;
-//        std::cout << "HIO_SIGNALS " << HIO_SIGNALS << std::endl;
-//        std::cout << "HIO_TAIL " << HIO_TAIL << std::endl;
-//        std::cout << "HIO_HEAD " << HIO_HEAD << std::endl;
-//        std::cout << "HIO_DATA " << HIO_DATA << std::endl;
-//        std::cout << "HIO_LENGTH " << HIO_LENGTH << std::endl;
-//        std::cout << "BUFFERS_LENGTH " << BUFFERS_LENGTH << std::endl;
-//        std::cout << "BUFFERS_BASE " << BUFFERS_BASE << std::endl;
+        std::cout << "LIO_SIGNALS " << LIO_SIGNALS << std::endl;
+        std::cout << "LIO_TAIL " << LIO_TAIL << std::endl;
+        std::cout << "LIO_HEAD " << LIO_HEAD << std::endl;
+        std::cout << "LIO_DATA " << LIO_DATA << std::endl;
+        std::cout << "LIO_LENGTH " << LIO_LENGTH << std::endl;
+        std::cout << "HIO_BASE " << HIO_BASE << std::endl;
+        std::cout << "HIO_SIGNALS " << HIO_SIGNALS << std::endl;
+        std::cout << "HIO_TAIL " << HIO_TAIL << std::endl;
+        std::cout << "HIO_HEAD " << HIO_HEAD << std::endl;
+        std::cout << "HIO_DATA " << HIO_DATA << std::endl;
+        std::cout << "HIO_LENGTH " << HIO_LENGTH << std::endl;
+        std::cout << "BUFFERS_LENGTH " << BUFFERS_LENGTH << std::endl;
+        std::cout << "BUFFERS_BASE " << BUFFERS_BASE << std::endl;
         dump_iohost_memory();
         return false;
 	}
 
+    BufferSet & read_lio_memory()
+    {
+        lio = *reinterpret_cast<BufferSet *>(rom_ram::read_memory(BUFFERS_BASE, LIO_LENGTH).data());
+        return lio;
+    }
+
+    BufferSet & read_hio_memory()
+    {
+        hio = *reinterpret_cast<BufferSet *>(rom_ram::read_memory(BUFFERS_BASE + HIO_BASE, HIO_LENGTH).data());
+        return hio;
+    }
+
+    void write_hio_memory()
+    {
+        rom_ram::write_memory(reinterpret_cast<uint8_t *>(&hio), sizeof(hio), BUFFERS_BASE + HIO_BASE);
+//        rom_ram::write_memory(reinterpret_cast<uint8_t *>(&hio), sizeof(BufferSet), BUFFERS_BASE + HIO_BASE);
+    }
+
+    void write_lio_memory()
+    {
+        // Write signals and tail
+        rom_ram::write_memory(reinterpret_cast<uint8_t *>(&lio), 2, BUFFERS_BASE);
+    }
 
     void process_isr()
     {
@@ -284,7 +319,7 @@ namespace iohost
 //            std::cout << "ISR Loop" << std::endl;
 //            std::cout << "Reading Buffers" << std::endl;
         dump_iohost_memory();
-        if ((0xff == iohost_buffers[LIO_SIGNALS]) || (!(iohost_buffers[LIO_SIGNALS] & 0x80)))   // TOHOST_READY
+        if (!(lio.signals & 0x80))   // TOHOST_READY
         {
 //                std::cout << "Not Ready" << std::endl;
 //                pio_interrupt_clear(pio, 0);
@@ -295,26 +330,26 @@ namespace iohost
         }
 //            std::cout << "Ready" << std::endl;
 
-        uint8_t head = iohost_buffers[LIO_HEAD];
-        uint8_t tail = iohost_buffers[LIO_TAIL];
-        if (head == tail)
+//        uint8_t head = iohost_buffers[LIO_HEAD];
+//        uint8_t tail = iohost_buffers[LIO_TAIL];
+        if (lio.head == lio.tail)
         {
 //                std::cout << "Empty Buffer" << std::endl;
             pio_sm_set_enabled(pio, sm, true);
             return;
         }
-        while (head != tail)
+        while (lio.head != lio.tail)
         {
-            VERBOSE("Head %u Tail %u", head, tail);
-            local_data.push_back(iohost_buffers[LIO_DATA+tail]);
-            tail++;
-            tail &= 7;
+            VERBOSE("Head %u Tail %u", lio.head, lio.tail);
+            local_data.push_back(lio.data[lio.tail]++);
+            lio.tail &= 7;
         }
-        iohost_buffers[LIO_SIGNALS] &= ~0x80;
-        iohost_buffers[LIO_TAIL] = tail;
+        lio.signals &= ~0x80;
+        //iohost_buffers[LIO_TAIL] = tail;
         // Write back signals and head
         std::cout << "Writing back" << std::endl;
-        rom_ram::write_memory(&iohost_buffers[0], 2, BUFFERS_BASE);
+        write_lio_memory();
+//        rom_ram::write_memory(&iohost_buffers[0], 2, BUFFERS_BASE);
         pio_interrupt_clear(pio, 0);
 
         // Reinit the state machine

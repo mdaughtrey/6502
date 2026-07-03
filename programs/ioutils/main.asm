@@ -33,8 +33,8 @@ COUNTER: .res 1
 .proc main
     sei
 ;    jsr var_init
-    jsr via6522_init
-    jsr iohost_init
+;    jsr via6522_init
+;    jsr iohost_init
 ;    jsr chaser_init
 ;    jsr via6522_timer_init
 
@@ -53,7 +53,7 @@ COUNTER: .res 1
 
 @main_loop:
 ;    jsr via6522_count
-    jsr iohost_loop
+;    jsr iohost_loop
     ; jsr read_keys ; returns key bitmap in A
 ;    jsr logic ; returns A: display bitmap
 ;    jsr display
@@ -124,5 +124,5 @@ COUNTER: .res 1
 ; A = byte to write
 .segment "RESETVEC"
 .word main
-.segment "IRQVEC"
-.word isr
+; .segment "IRQVEC"
+; .word isr

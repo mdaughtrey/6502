@@ -34,10 +34,10 @@ namespace terminal
     uint offset;
     int sm = 0;
     volatile bool isr = false;
-    std::vector<uint8_t> terminal_buffers;
+//    std::vector<uint8_t> terminal_buffers;
 
     void handle(uint8_t input);
-    void read_buffer();
+    void read_lio();
     void write_buffer(uint8_t data);
 
     bool terminal_active = false;
@@ -94,7 +94,7 @@ namespace terminal
 		// Initial OSR value
 		pio_sm_put(pio, sm, 0x0300);
 		VERBOSE("Pushed 0x0300");
-        read_buffer();
+        read_lio();
         VERBOSE("Flush Buffers");
 
         return false;
@@ -130,14 +130,15 @@ namespace terminal
     }
 
 
-    void read_buffer()
+    void read_lio()
     {
         std::vector<uint8_t> local_data;
         isr = false;
-        terminal_buffers = rom_ram::read_memory(BUFFERS_BASE, LIO_LENGTH);
-        BufferSet * buffer_set = reinterpret_cast<BufferSet*>(terminal_buffers.data());
+//        terminal_buffers = rom_ram::read_memory(BUFFERS_BASE, LIO_LENGTH);
+        BufferSet & lio(iohost::read_lio_memory());
+//        = reinterpret_cast<BufferSet*>(terminal_buffers.data());
 
-        if (!(buffer_set[0].signals & 0x80))
+        if (!(lio.signals & 0x80))
         {
             pio_sm_init(pio, sm, offset, &smc);
             pio_sm_set_enabled(pio, sm, true);
@@ -145,22 +146,23 @@ namespace terminal
             return;
         }
 
-        uint8_t & head = buffer_set[0].head;
-        uint8_t & tail = buffer_set[0].tail;
-        if (head == tail)
+//        uint8_t & head = buffer_set[0].head;
+//        uint8_t & tail = buffer_set[0].tail;
+        if (lio.head == lio.tail)
         {
             pio_sm_set_enabled(pio, sm, true);
             return;
         }
-        while (head != tail)
+        while (lio.head != lio.tail)
         {
-            local_data.push_back(buffer_set[0].data[tail++]);
-            tail &= 7;
+            local_data.push_back(lio.data[lio.tail++]);
+            lio.tail &= 7;
         }
-        buffer_set[0].signals &= ~0x80;
+        lio.signals &= ~0x80;
 //        terminal_buffers[LIO_TAIL] = tail;
         // Write back signals and head
-        rom_ram::write_memory(&terminal_buffers[0], 2, BUFFERS_BASE);
+        iohost::write_lio_memory();
+//        rom_ram::write_memory(&terminal_buffers[0], 2, BUFFERS_BASE);
         pio_interrupt_clear(pio, 0);
 
         // Reinit the state machine
@@ -176,29 +178,36 @@ namespace terminal
 
     void write_buffer(uint8_t data)
     {
-        terminal_buffers = rom_ram::read_memory(BUFFERS_BASE + HIO_BASE, LIO_LENGTH);
-        BufferSet * buffer_set = reinterpret_cast<BufferSet*>(terminal_buffers.data());
-        uint8_t & signals(buffer_set[0].signals);
-        uint8_t head = buffer_set[0].head;
-        uint8_t & tail(buffer_set[0].tail);
+//        terminal_buffers = rom_ram::read_memory(BUFFERS_BASE + HIO_BASE, HIO_LENGTH);
+        BufferSet & hio(iohost::read_hio_memory());
+//        = reinterpret_cast<BufferSet*>(terminal_buffers.data());
+ //       uint8_t & signals(buffer_set[0].signals);
+        uint8_t head = hio.head;
+//        uint8_t & tail(buffer_set[0].tail);
+        printf("Before: Data %02x Head %02x Tail %02x\r\n", data, head, hio.tail);
 
-        buffer_set[0].data[head++] = data;
+        hio.data[head++] = data;
         head &= 7;
-        if (head == tail)
+        if (head == hio.tail)
         {
             printf("\r\n*** Tx Buffer Full *** \r\n");
             sleep_ms(1000);
             return;
         }
-        buffer_set[0].head = head;
-        buffer_set[0].signals |= 0x80;
+        hio.head = head;
+        hio.signals |= 0x80;
+        printf("After: Data %02x Head %02x Tail %02x\r\n", data, head, hio.tail);
+        iohost::write_hio_memory();
+//        rom_ram::write_memory(terminal_buffers.data(), LIO_LENGTH, BUFFERS_BASE + HIO_BASE);
+        iohost::dump_iohost_memory();
+    
     }
 
     void loop(void)
     {
         if (isr)
         {
-            read_buffer();
+            read_lio();
         }
     }
 

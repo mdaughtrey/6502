@@ -39,11 +39,11 @@ mc: compile  	# mount and copy
 upload: 
 	${ACLI} upload  -b ${PLATFORM} -p ${PORT} -i  ${UF2}
 
-sl: 
+s: 
 	-rm screenlog.0
 	screen -L "${PORT}" 460800 
 
-s: 
+t: 
 	screen "${PORT}" 460800 
 	# screen ${PORT} 115200
 

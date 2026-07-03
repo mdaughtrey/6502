@@ -1,0 +1,109 @@
+Bus Buffer 0 (Rightmost):
+           T~R    Vcc
+RP2350 A15 A0     ~OE
+RP2350 A14 A1     B0 6502 A15
+RP2350 A13 A2     B1 6502 A14
+RP2350 A12 A3     B2 6502 A13
+RP2350 A11 A4     B3 6502 A12
+RP2350 A10 A5     B4 6502 A11
+RP2350 A9  A6     B5 6502 A10
+RP2350 A8  A7     B6 6502 A9
+           Gnd    B7 6502 A8
+
+Bus Buffer 1:
+           T~R    Vcc
+RP2350 A7  A0     ~OE
+RP2350 A6  A1     B0 6502 A7
+RP2350 A5  A2     B1 6502 A6
+RP2350 A4  A3     B2 6502 A5
+RP2350 A3  A4     B3 6502 A4
+RP2350 A2  A5     B4 6502 A3
+RP2350 A1  A6     B5 6502 A2
+RP2350 A0  A7     B6 6502 A1
+           Gnd    B7 6502 A0
+
+
+Bus Buffer 2:
+             T~R    Vcc
+RP2350 CLK   A0     ~OE
+RP2350 RST   A1     B0 6502 CLK
+RP2350 BE    A2     B1 6502 RST
+RP2350 IRQ   A3     B2 6502 BE ** To Be Wired **
+RP2350 NMI   A4     B3 6502 IRQ
+RP2350 RW    A5     B4 6502 NMI
+RP2350 RDY   A6     B5 *** need to make this HiZ sometimes 6502 RW
+6502 SYNC    A7     B6 6502 RDY
+             Gnd    B7 RP2350 SYNC ** To Be Wired **
+
+
+Bus Buffer 3:
+           T~R    Vcc
+RP2350 D0  A0     ~OE
+RP2350 D1  A1     B0 6502 D0
+RP2350 D2  A2     B1 6502 D1
+RP2350 D3  A3     B2 6502 D2
+RP2350 D4  A4     B3 6502 D3
+RP2350 D5  A5     B4 6502 D4
+RP2350 D6  A6     B5 6502 D5
+RP2350 D7  A7     B6 6502 D6
+           Gnd    B7 6502 D7
+
+
+Address Buffers:
+
+A = RP2350
+B = 6502
+
+RW = 1, read from RAM 
+RW = 0, write to RAM
+
+TR = 1, A->B = RP2350->RAM
+TR = 0, B->A = RAM->RP2350
+
+BE->6502 = 0, 6502 bus is high impedance
+BE->6502 = 1, 6502 bus is active
+OE = 0, busses connected
+OE = 1, busses isolated
+
+When RP2350 is writing to RAM
+BE = 0                  ; Disconnect 6502 from Address and Data busses
+Address TR = 1          ; Set Address RP2350->6502
+Data TR = 1             ; Set Data RP2350->6502
+Address OE = 0          ; Connect Address Bus
+Data OE = 0             ; Connect Data Bus
+Assert Address Bus
+Assert Data Bus
+RW = 0                  ; Set bus write to RAM
+Clock = 0               ; clock in the data to RAM
+Clock = 1               ; ...
+Data OE = 1             ; Disconnect Data Bus
+Address OE = 1          ; Disconnect Address Bus
+Address TR = 0          ; Set Address 6502->RP2350
+Data TR = 0             ; Set Data 6502->RP2350
+BE = 1                  ; Enable 6502 Address and Data busses
+
+
+When RP2350 is reading from RAM
+BE = 0                  ; Disconnect 6502 from Address and Data busses
+Address TR = 1          ; Set Address RP2350->6502
+Data TR = 0             ; Set Data 6502->RP2350
+Address OE = 0          ; Connect Address Bus
+Data OE = 0             ; Connect Data Bus
+Assert Address Bus
+RW = 1                  ; Set bus read from RAM
+Read from Data Bus
+Address OE = 1          ; Disconnect Address Bus
+Data OE = 1             ; Disconnect Data Bus
+Address TR = 0          ; Set Address 6502->RP2350
+BE = 1                  ; Enable 6502 Address and Data Busses
+
+When RP2350 is monitoring address bus
+Address TR = 0          ; Set Address 6502->RP2350
+Address OE = 0          ; Connecdt Address Bus
+Read Address Bus
+
+| Mode                   | BE  | RW  | Address TR | Address OE | Data TR | Data OE |
+| ---                    | --- | --- | ---        | ---        | ---     | ---     |
+| RP2350 write to RAM    | 0   | 0   | 1          | 0          | 1       | 0       |
+| RP2350 read from RAM   | 0   | 1   | 1          | 0          | 0       | 0       |
+| RP2350 monitor address | 1   | X   | 0          | 0          | X       | 1       |

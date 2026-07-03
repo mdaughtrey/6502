@@ -65,8 +65,8 @@ namespace cmd_io
     {
 //        gpio_init(PIN_IRQ);
 //        gpio_set_pulls(PIN_IRQ, true, false);
-        gpio_init(PIN_RESET);
-        gpio_set_dir(PIN_RESET, GPIO_OUT);
+//        gpio_init(PIN_RESET);
+//        gpio_set_dir(PIN_RESET, GPIO_OUT);
 //        gpio_put(PIN_RESET, 1);
         cmd_init_buses(CommandInput());
     }
@@ -290,18 +290,7 @@ namespace cmd_io
 
     bool cmd_pin_status(CommandInput input = CommandInput())
     {
-        if (useJSONIO)
-        {
-//            char buffer[64];
-            uint64_t pins = gpioc_hilo_in_get();
-//            std::cout << std::hex << std::setw(64) << std::setfill('0') << pins << std::endl;
-            std::cout << "{\"event\": \"pinstatus\", \"pins\": \"" << std::hex << std::setw(16) << std::setfill('0') << pins << "\"}" << std::endl;
-            //printf("{\"pins\": \"%08x%08x\"}\r\n", pins >> 32, pins & 0xffffffff); //log_queue.push_back(buffer);
-        }
-        else
-        {
-            pin_status(false);
-        }
+        pin_status(false);
         return false;
     }
 
@@ -337,11 +326,17 @@ namespace cmd_io
     void pin_status(bool clock_state)
     {
         char buffer[128];
+        uint64_t pins = gpioc_hilo_in_get();
+        if (useJSONIO)
+        {
+            std::cout << "{\"event\": \"pinstatus\", \"pins\": \"" << std::hex << std::setw(16) << std::setfill('0') << pins << "\"}" << std::endl;
+            return;
+        }
+
         sprintf(buffer, "     Data          Addr                   Data     SRRni r. B     C           AddrH    AddrL");
         log_queue::log(buffer);
         sprintf(buffer, ".... ..    .. .... .... ........ ........ ........ YYWIQ.S. e.....K. ........ FEDCBA98 76543210");
         log_queue::log(buffer);
-        uint64_t pins = gpioc_hilo_in_get();
 //        uint64_t pins = sio_hw->gpio_in | ((uint64_t)sio_hw->gpio_hi_in << 32);
         uint64_t mask = (static_cast<uint64_t>(sio_hw->gpio_hi_oe) << 32) | static_cast<uint64_t>(sio_hw->gpio_oe);
         sprintf(buffer, "%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s <- Data",

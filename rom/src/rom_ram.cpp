@@ -246,19 +246,19 @@ namespace rom_ram
         {
 //            std::cout << std::hex << std::setfill('0') << std::setw(4) << target_address + ii << " " << std::setw(2) << static_cast<int>(data[ii]) << std::endl;
             //bus_asserts::assert_address_bus(target_address + ii);
+//            sleep_ms(1);
             gpio_put_masked64(cmd_io::ADDR_MASK | cmd_io::DATA_MASK, (target_address + ii) | (static_cast<uint64_t>(data[ii]) << PIN_DATA0));
 //			gpio_put(ii + 40, (data & (1 << ii)) ? 1 : 0);
 //            std::cout << "asserted address bus" << std::endl;
 //            bus_asserts::assert_databus(data[ii]);
 //            gpio_put_masked64(cmd_io::DATA_MASK, data[ii]);
 //            std::cout << "asserted data bus" << std::endl;
-            sleep_us(1);
+//            sleep_ms(1);
             gpio_put(PIN_RW, 0);
 //            std::cout << "asserted rw 0" << std::endl;
-            sleep_us(1);
+//            sleep_ms(1);
             gpio_put(PIN_RW, 1);
 //            std::cout << "asserted rw 1" << std::endl;
-            sleep_us(1);
         }
     }
 

@@ -5,20 +5,6 @@
 
 namespace iohost
 {
-    void init();
-    void loop();
-    void cmd_set_isr(bool);
-    bool cmd_load_pio(CommandInput);
-    bool cmd_push_to_fifo(CommandInput);
-    bool cmd_read_from_fifo(CommandInput);
-    bool cmd_reset_pio(CommandInput);
-    bool cmd_set_out_shift(CommandInput);
-    bool cmd_set_in_shift(CommandInput);
-    bool cmd_list_programs(CommandInput);
-    bool cmd_initialize_test(CommandInput);
-	bool cmd_dump_iohost_memory(CommandInput);
-    bool cmd_terminal_mode(CommandInput);
-
     typedef enum 
     {
         LIO_SIGNALS = 0,
@@ -43,6 +29,26 @@ namespace iohost
         uint8_t head;
         uint8_t data[8];
     }BufferSet;
+
+    void init();
+    void loop();
+    void cmd_set_isr(bool);
+    bool cmd_load_pio(CommandInput);
+    bool cmd_push_to_fifo(CommandInput);
+    bool cmd_read_from_fifo(CommandInput);
+    bool cmd_reset_pio(CommandInput);
+    bool cmd_set_out_shift(CommandInput);
+    bool cmd_set_in_shift(CommandInput);
+    bool cmd_list_programs(CommandInput);
+    bool cmd_initialize_test(CommandInput);
+	bool cmd_dump_iohost_memory(CommandInput);
+    bool cmd_terminal_mode(CommandInput);
+
+	void dump_iohost_memory();
+    BufferSet & read_lio_memory();
+    BufferSet & read_hio_memory();
+    void write_hio_memory();
+    void write_lio_memory();
 }
 
 

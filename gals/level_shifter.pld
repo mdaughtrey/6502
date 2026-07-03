@@ -1,0 +1,18 @@
+GAL16V8
+
+NC BE RW  NC NC NC NC NC NC GND
+NC RWO ATR NC DTR DOE  NC NC NC VCC
+
+; Address bus RP2350->RAM when bus disabled
+ATR = /BE
+; Address bus always connected
+; AOE = 0
+; Data bus RP2350->RAM on write
+; Data bus RAM->RP2350->RAM on read
+DTR = /RW  
+; Data bus connected when bus disabled
+DOE = /BE
+; RW Output HiZ = RW
+RWO.T = RW
+; RW HiZ on Bus enable
+RWO.E = /BE

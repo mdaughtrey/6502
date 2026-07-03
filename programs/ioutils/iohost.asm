@@ -95,9 +95,13 @@ BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
     txa
     and #BUFFER_MASK
     sta HIO_TAIL        ; Store updated tail index
+    cmp HIO_HEAD
+    bne @not_empty
+    
     lda HIO_SIGNALS
     and #~FROMHOST_READY & $ff
     sta HIO_SIGNALS     ; Clear FROMHOST_READY to indicate we've read the byte
+@not_empty:
     tya
     sec
     rts
@@ -132,8 +136,7 @@ BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
 .proc iohost_loop
 ;    jsr iohost_tx_drain
 ;    lda #'M'
-;    jsr iohost_rx_fill
-;
+
     jsr iohost_rx
     bcc @no_data
     jsr iohost_tx
