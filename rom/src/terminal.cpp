@@ -96,6 +96,7 @@ namespace terminal
 		VERBOSE("Pushed 0x0300");
         read_lio();
         VERBOSE("Flush Buffers");
+        printf("ESC/ESC to exit\r\n");
 
         return false;
     }

@@ -46,3 +46,16 @@ PinScopeAddressRead::~PinScopeAddressRead()
 {
     gpio_set_dir_masked64(mask, 0);
 }
+
+PinScopeReadWrite::PinScopeReadWrite()
+    : mask(cmd_io::RW_MASK)
+{
+    gpio_set_dir_masked64(mask, mask);
+    gpio_put(PIN_RW, RW_READ);
+}
+
+PinScopeReadWrite::~PinScopeReadWrite()
+{
+    gpio_put(PIN_RW, RW_READ);
+    gpio_set_dir_masked64(mask, 0);
+}

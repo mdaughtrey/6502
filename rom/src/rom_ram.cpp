@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <bitset>
 #include <cstring>
 #include <cstdio>
 #include "pico/stdlib.h"
@@ -16,6 +17,7 @@
 // #include "varstacktest.h"
 #include "bus_asserts.h"
 #include "pin_scope.h"
+#include "log_queue.h"
 
 namespace rom_ram
 {
@@ -26,6 +28,8 @@ namespace rom_ram
         uint16_t length;
         uint8_t code[256];
     } Program;
+
+    uint32_t rw_delay_us = 0;
 
 //    const uint16_t RR_ROM_BASE = 0x8000;
 //    const uint16_t RR_ROM_SIZE = 0x8000;
@@ -89,23 +93,25 @@ namespace rom_ram
     std::vector<uint8_t> read_memory(uint32_t address, uint32_t length)
     {
         std::vector<uint8_t> data(length, 0);
+#error TODO PinScopeBusEnable is messing with PIN_RW
         PinScopeBusEnable scope;
-        PinScopeAddressRead scope1;
-
-        gpio_put(PIN_RW, 1);        // Read
-
-        auto iter = data.begin();
-        for (uint32_t addr = address; addr < address + length; addr++)
-        {
-            if (addr > 0xffff)
-            {
-                continue;
-            }
-            gpio_put_masked64(cmd_io::ADDR_MASK, addr);
-            sleep_us(1);
-            (*iter) = static_cast<uint8_t>(gpioc_hilo_in_get() >> 40);
-            iter++;
-        }
+//        PinScopeAddressRead scope1;
+//        PinScopeReadWrite scope2;
+//
+//        auto iter = data.begin();
+//        for (uint32_t addr = address; addr < address + length; addr++)
+//        {
+//            if (addr > 0xffff)
+//            {
+//                printf("read_memory: trying to access %04x\r\n", addr);
+//                return std::vector<uint8_t>(1, 0);
+//            }
+//            gpio_put_masked64(cmd_io::ADDR_MASK, addr);
+//            if (rw_delay_us) sleep_us(rw_delay_us);
+//            (*iter) = static_cast<uint8_t>(gpioc_hilo_in_get() >> 40);
+//            if (rw_delay_us) sleep_us(rw_delay_us);
+//            iter++;
+//        }
         return data;
     }
 
@@ -242,23 +248,28 @@ namespace rom_ram
     {
         PinScopeBusEnable scope;
         PinScopeAddressWrite scope1;
+        PinScopeReadWrite scope2;
         for (auto ii = 0; ii < length; ii++)
         {
-//            std::cout << std::hex << std::setfill('0') << std::setw(4) << target_address + ii << " " << std::setw(2) << static_cast<int>(data[ii]) << std::endl;
-            //bus_asserts::assert_address_bus(target_address + ii);
-//            sleep_ms(1);
+            if ((target_address + ii) > 0xffff)
+            {
+                printf("write_memory: trying to access %04x\r\n", target_address + ii);
+                return;
+            }
+            uint64_t towrite = (target_address + ii) | (static_cast<uint64_t>(data[ii]) << PIN_DATA0);
+            VERBOSE("write_memory:mask64: %s", std::bitset<64>(towrite).to_string().c_str());
             gpio_put_masked64(cmd_io::ADDR_MASK | cmd_io::DATA_MASK, (target_address + ii) | (static_cast<uint64_t>(data[ii]) << PIN_DATA0));
-//			gpio_put(ii + 40, (data & (1 << ii)) ? 1 : 0);
-//            std::cout << "asserted address bus" << std::endl;
-//            bus_asserts::assert_databus(data[ii]);
-//            gpio_put_masked64(cmd_io::DATA_MASK, data[ii]);
-//            std::cout << "asserted data bus" << std::endl;
-//            sleep_ms(1);
+//            uint64_t pins = gpioc_hilo_in_get();
+//            VERBOSE("write_memory:mask64 readback 0: %s", std::bitset<64>(pins).to_string().c_str());
+
+            if (rw_delay_us) sleep_us(rw_delay_us);
+
             gpio_put(PIN_RW, 0);
-//            std::cout << "asserted rw 0" << std::endl;
-//            sleep_ms(1);
+            if (rw_delay_us) sleep_us(rw_delay_us);
             gpio_put(PIN_RW, 1);
-//            std::cout << "asserted rw 1" << std::endl;
+            if (rw_delay_us) sleep_us(rw_delay_us);
+//            pins = gpioc_hilo_in_get();
+//            VERBOSE("write_memory:mask64 readback 1: %s", std::bitset<64>(pins).to_string().c_str());
         }
     }
 
@@ -284,6 +295,43 @@ namespace rom_ram
         return false;
     }
 
+    bool cmd_memory_test(CommandInput input = CommandInput())
+    {
+        uint8_t rom_image[65536];
+        printf("Uploading test image...");
+        for (auto ii = 0; ii < 65536; ii++)
+        {
+            rom_image[ii] = ii % 256;
+        }
+        write_memory(rom_image, 65536, 0x0000);
+        std::vector<uint8_t> ram_image = read_memory(0, 65536);
+        for (auto ii = 0; ii < 65536; ii++)
+        {
+            if (ram_image[ii] != ii % 256)
+            {
+                printf("Failed %04x: ROM %02x RAM %02x\r\n", ii, ii % 256, ram_image[ii]);
+            }
+        }
+        return false;
+    }
+
+    bool cmd_memory_test_slow(CommandInput input = CommandInput())
+    {
+        for (auto ii = 0; ii < 65536; ii++)
+        {
+            uint8_t data(ii % 256);;
+            printf("Write to %04x\r\n", ii);
+            write_memory(&data, 1, ii);
+            std::vector<uint8_t> got_back(read_memory(ii, 1));
+            printf("Read %02x from  %04x\r\n", got_back[0], ii);
+            if (got_back[0] != ii % 256)
+            {
+                printf("Failed %04x: got back %02x\r\n", ii, got_back[0]);
+            }
+        }
+        printf("Complete\r\n");
+        return false;
+    }
     
 
     bool cmd_write_memory(CommandInput input = CommandInput())
@@ -295,6 +343,48 @@ namespace rom_ram
         uint16_t addr = std::stoi(input[1], nullptr, 16);
         uint8_t data = std::stoi(input[2], nullptr, 16);
         write_memory(&data, 1, addr);
+        return false;
+    }
+
+    bool cmd_flood_ram(CommandInput input = CommandInput())
+    {
+        if (input.empty())
+        {
+            return true;
+        }
+        for (auto iter = input.begin(); iter != input.end(); iter++)
+        {
+            printf("input %s\r\n", iter->c_str());
+        }
+        uint8_t flood = std::stoi(input[0], nullptr, 16);
+        uint8_t rom_image[65536];
+        printf("Uploading test image...");
+        for (auto ii = 0; ii < 65536; ii++)
+        {
+            rom_image[ii] = flood;
+        }
+        write_memory(rom_image, 65536, 0x0000);
+        printf("Verifying...\r\n");
+        std::vector<uint8_t> ram_image = read_memory(0, 65536);
+        for (auto ii = 0; ii < 65536; ii++)
+        {
+            if (ram_image[ii] != flood)
+            {
+                printf("Failed %04x: %02x\r\n", ii, ram_image[ii]);
+            }
+        }
+        printf("Complete\r\n");
+        return false;
+    }
+
+    bool cmd_rw_memory_delay(CommandInput input = CommandInput())
+    {
+        if (input.empty())
+        {
+            return true;
+        }
+        rw_delay_us = std::stol(input[0], nullptr, 10);
+        VERBOSE("rw_delay_us is %u\r\n", rw_delay_us);
         return false;
     }
 

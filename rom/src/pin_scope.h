@@ -33,6 +33,14 @@ public:
     ~PinScopeAddressRead();
 };
 
+class PinScopeReadWrite
+{
+    uint64_t mask;
+public:
+    PinScopeReadWrite();
+    ~PinScopeReadWrite();
+};
+
 
 
 #endif // PIN_SCOPE_H

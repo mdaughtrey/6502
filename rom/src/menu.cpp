@@ -103,9 +103,13 @@ Command commands_rom_ram[] = {
     Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})", "Enter addr/length (XXXX/XXXX)"),
     rom_ram::cmd_dump_memory
 },
+{'D', "Set global write_memory/read_memory delay", Validator("[0-9]+", "us"), rom_ram::cmd_rw_memory_delay },
 {'?', "help", Validator(""), cmd_help },
+{'f', "Flood RAM", Validator("[0-9a-fA-F]{2}", "Enter hex value (XX)"), rom_ram::cmd_flood_ram },
 {'i', "Upload ROM Image", Validator(""), rom_ram::cmd_upload_rom_image },
 {'l', "List Programs", Validator(""), rom_ram::cmd_list_programs },
+{'m', "Memory Test", Validator(""), rom_ram::cmd_memory_test },
+{'M', "Memory Test Slow", Validator(""), rom_ram::cmd_memory_test_slow },
 // {'u', "Upload ROM", hex_validator, rom_ram::cmd_upload_rom },
 {'p', "Load Program (NN)", Validator("(\\d+)", "Program number"), rom_ram::cmd_load_program_to_memory },
 {'t', "Upload test image", Validator(""), rom_ram::cmd_upload_test_image },

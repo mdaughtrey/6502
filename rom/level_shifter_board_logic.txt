@@ -1,6 +1,6 @@
 Bus Buffer 0 (Rightmost):
-           T~R    Vcc
-RP2350 A15 A0     ~OE
+GAL ATR    T~R    Vcc
+RP2350 A15 A0     ~OE 0v
 RP2350 A14 A1     B0 6502 A15
 RP2350 A13 A2     B1 6502 A14
 RP2350 A12 A3     B2 6502 A13
@@ -11,8 +11,8 @@ RP2350 A8  A7     B6 6502 A9
            Gnd    B7 6502 A8
 
 Bus Buffer 1:
-           T~R    Vcc
-RP2350 A7  A0     ~OE
+GAL ATR    T~R    Vcc
+RP2350 A7  A0     ~OE 0v
 RP2350 A6  A1     B0 6502 A7
 RP2350 A5  A2     B1 6502 A6
 RP2350 A4  A3     B2 6502 A5
@@ -24,21 +24,23 @@ RP2350 A0  A7     B6 6502 A1
 
 
 Bus Buffer 2:
-             T~R    Vcc
-RP2350 CLK   A0     ~OE
+5v           T~R    Vcc
+RP2350 CLK   A0     ~OE 0v
 RP2350 RST   A1     B0 6502 CLK
 RP2350 BE    A2     B1 6502 RST
-RP2350 IRQ   A3     B2 6502 BE ** To Be Wired **
+->GAL BE *TODO
+RP2350 IRQ   A3     B2 6502 BE
 RP2350 NMI   A4     B3 6502 IRQ
 RP2350 RW    A5     B4 6502 NMI
-RP2350 RDY   A6     B5 *** need to make this HiZ sometimes 6502 RW
+(-> GAL RW)
+RP2350 RDY   A6     B5 6502 NC (GAL Drives 6502 R/W)
 6502 SYNC    A7     B6 6502 RDY
-             Gnd    B7 RP2350 SYNC ** To Be Wired **
+             Gnd    B7 RP2350 SYNC 
 
 
 Bus Buffer 3:
-           T~R    Vcc
-RP2350 D0  A0     ~OE
+GAL DTR    T~R    Vcc
+RP2350 D0  A0     ~OE GAL DOE
 RP2350 D1  A1     B0 6502 D0
 RP2350 D2  A2     B1 6502 D1
 RP2350 D3  A3     B2 6502 D2
@@ -48,6 +50,12 @@ RP2350 D6  A6     B5 6502 D5
 RP2350 D7  A7     B6 6502 D6
            Gnd    B7 6502 D7
 
+; Address bus RP2350->RAM when bus disabled
+ATR = /BE
+DTR = /RW  
+DOE = /BE
+RWO.T = RW
+RWO.E = /BE
 
 Address Buffers:
 
@@ -99,7 +107,7 @@ BE = 1                  ; Enable 6502 Address and Data Busses
 
 When RP2350 is monitoring address bus
 Address TR = 0          ; Set Address 6502->RP2350
-Address OE = 0          ; Connecdt Address Bus
+Address OE = 0          ; Connect Address Bus
 Read Address Bus
 
 | Mode                   | BE  | RW  | Address TR | Address OE | Data TR | Data OE |
@@ -107,3 +115,46 @@ Read Address Bus
 | RP2350 write to RAM    | 0   | 0   | 1          | 0          | 1       | 0       |
 | RP2350 read from RAM   | 0   | 1   | 1          | 0          | 0       | 0       |
 | RP2350 monitor address | 1   | X   | 0          | 0          | X       | 1       |
+
+
+
+TESTS
+Address Lines:  ATR=1, R/W = 0, BE=0
+Io180 Io310 o15
+Io180 Io310 o14
+Io180 Io310 o13
+Io180 Io310 o12
+Io180 Io310 o11
+Io180 Io310 o10
+Io180 Io310 o09
+Io180 Io310 o08
+Io180 Io310 o07
+Io180 Io310 o06
+Io180 Io310 o05
+Io180 Io310 o04
+Io180 Io310 o03
+Io180 Io310 o02
+Io180 Io310 o01
+Io180 Io310 o00
+
+Data Lines: DTR = 1, R/W=0  BE=1
+Io180 Io311 D7
+Io180 Io311 D6
+Io180 Io311 D5
+Io180 Io311 D4
+Io180 Io311 D3
+Io180 Io311 D2
+Io180 Io311 D1
+Io180 Io311 D0
+
+IO Lines
+CLK 25 out ok
+RESET 33 out ok
+NMI 36 out ok
+IRQ 35 out ok
+BE 31 out ok
+RW 18 out ok
+READY 17 ok
+SYNC 39 in
+
+
