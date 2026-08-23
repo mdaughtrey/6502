@@ -16,3 +16,5 @@ DOE = /BE
 RWO.T = RW
 ; RW HiZ on Bus enable
 RWO.E = /BE
+; LEDs
+; AWO ATR DTR DOE Lit = 1 Dark = 0
