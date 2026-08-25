@@ -74,11 +74,12 @@ namespace cmd_io
             gpio_init(ii);
         }
         gpio_set_dir(PIN_BUS_ENABLE, GPIO_OUT);
+        gpio_pull_up(PIN_BUS_ENABLE);
         gpio_put(PIN_BUS_ENABLE, BE_INACTIVE);
 
         gpio_pull_up(PIN_IRQ);
         gpio_pull_up(PIN_NMI);
-        gpio_pull_up(PIN_BUS_ENABLE);
+        gpio_pull_up(PIN_RW);
 
         uint64_t mask = RESET_MASK | CLOCK_MASK | PHI0_MASK | BE_MASK | NMI_MASK | RW_MASK;
         VERBOSE("cmd_init_buses: Pin initialization mask is %s", std::bitset<64>(mask).to_string().c_str());
@@ -90,7 +91,7 @@ namespace cmd_io
                 gpio_put(ii, 1);
             }
         }
-        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
+//        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         return false;
     }
 

@@ -20,6 +20,7 @@ public:
 class PinScopeAddressWrite
 {
     uint64_t mask;
+    bool bus_active;
 public:
     PinScopeAddressWrite();
     ~PinScopeAddressWrite();
@@ -28,6 +29,7 @@ public:
 class PinScopeAddressRead
 {
     uint64_t mask;
+    bool bus_active;
 public:
     PinScopeAddressRead();
     ~PinScopeAddressRead();

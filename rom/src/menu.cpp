@@ -99,7 +99,7 @@ Command commands_io[] = {
 Command commands_rom_ram[] = {
 // {'b', "CPU Boot Address (XXXX)", hex_validator, rom_ram::cmd_cpu_boot_address },
 {
-    'd', "Dump Memory (XXXX/XXXX)",
+    'd', "Dump Memory, bus disabled (XXXX/XXXX)",
     Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{4})", "Enter addr/length (XXXX/XXXX)"),
     rom_ram::cmd_dump_memory
 },
@@ -113,7 +113,7 @@ Command commands_rom_ram[] = {
 // {'u', "Upload ROM", hex_validator, rom_ram::cmd_upload_rom },
 {'p', "Load Program (NN)", Validator("(\\d+)", "Program number"), rom_ram::cmd_load_program_to_memory },
 {'t', "Upload test image", Validator(""), rom_ram::cmd_upload_test_image },
-{'w', "Write to Memory (XXXX/XX)", Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{2})", "Enter addr/value (XXXX/XX)"), rom_ram::cmd_write_memory},
+{'w', "Write to Memory, bus disabled (XXXX/XX) ", Validator("([0-9a-fA-F]{4})/([0-9a-fA-F]{2})", "Enter addr/value (XXXX/XX)"), rom_ram::cmd_write_memory},
 {'x', "Main Menu", Validator(""), [](CommandInput)->bool { command_set = commands_top; return false; }},
 {0x01, "", Validator(""), [](CommandInput input)->bool { return false;} }
 };

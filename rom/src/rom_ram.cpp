@@ -93,25 +93,22 @@ namespace rom_ram
     std::vector<uint8_t> read_memory(uint32_t address, uint32_t length)
     {
         std::vector<uint8_t> data(length, 0);
-#error TODO PinScopeBusEnable is messing with PIN_RW
-        PinScopeBusEnable scope;
-//        PinScopeAddressRead scope1;
-//        PinScopeReadWrite scope2;
-//
-//        auto iter = data.begin();
-//        for (uint32_t addr = address; addr < address + length; addr++)
-//        {
-//            if (addr > 0xffff)
-//            {
-//                printf("read_memory: trying to access %04x\r\n", addr);
-//                return std::vector<uint8_t>(1, 0);
-//            }
-//            gpio_put_masked64(cmd_io::ADDR_MASK, addr);
-//            if (rw_delay_us) sleep_us(rw_delay_us);
-//            (*iter) = static_cast<uint8_t>(gpioc_hilo_in_get() >> 40);
-//            if (rw_delay_us) sleep_us(rw_delay_us);
-//            iter++;
-//        }
+        PinScopeAddressRead scope;
+        auto iter = data.begin();
+        for (uint32_t addr = address; addr < address + length; addr++)
+        {
+            if (addr > 0xffff)
+            {
+                printf("read_memory: trying to access %04x\r\n", addr);
+                return std::vector<uint8_t>(1, 0);
+            }
+            gpio_put_masked64(cmd_io::ADDR_MASK, addr);
+            if (rw_delay_us) sleep_us(rw_delay_us);
+            (*iter) = static_cast<uint8_t>(gpioc_hilo_in_get() >> 40);
+//            VERBOSE("%04x -> %02x\r\n", addr, (*iter));
+            if (rw_delay_us) sleep_us(rw_delay_us);
+            iter++;
+        }
         return data;
     }
 
@@ -246,9 +243,7 @@ namespace rom_ram
 
     void write_memory(uint8_t * data, uint32_t length, uint16_t target_address)
     {
-        PinScopeBusEnable scope;
-        PinScopeAddressWrite scope1;
-        PinScopeReadWrite scope2;
+        PinScopeAddressWrite scope;
         for (auto ii = 0; ii < length; ii++)
         {
             if ((target_address + ii) > 0xffff)
@@ -259,8 +254,6 @@ namespace rom_ram
             uint64_t towrite = (target_address + ii) | (static_cast<uint64_t>(data[ii]) << PIN_DATA0);
             VERBOSE("write_memory:mask64: %s", std::bitset<64>(towrite).to_string().c_str());
             gpio_put_masked64(cmd_io::ADDR_MASK | cmd_io::DATA_MASK, (target_address + ii) | (static_cast<uint64_t>(data[ii]) << PIN_DATA0));
-//            uint64_t pins = gpioc_hilo_in_get();
-//            VERBOSE("write_memory:mask64 readback 0: %s", std::bitset<64>(pins).to_string().c_str());
 
             if (rw_delay_us) sleep_us(rw_delay_us);
 
@@ -268,8 +261,6 @@ namespace rom_ram
             if (rw_delay_us) sleep_us(rw_delay_us);
             gpio_put(PIN_RW, 1);
             if (rw_delay_us) sleep_us(rw_delay_us);
-//            pins = gpioc_hilo_in_get();
-//            VERBOSE("write_memory:mask64 readback 1: %s", std::bitset<64>(pins).to_string().c_str());
         }
     }
 
