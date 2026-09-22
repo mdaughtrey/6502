@@ -44,5 +44,12 @@ SELECTIO = DDRB
     rts
 .endproc
 
-.export via6522_init, via6522_timer_init, via6522_isr_ret, via6522_count
+; A = value to write to PORTA
+.proc via6522_set_porta
+    ; A: value to set PORTA to
+    sta ORAIRA
+    rts
+.endproc
+
+.export via6522_init, via6522_timer_init, via6522_isr_ret, via6522_count, via6522_set_porta
 .export DATAPORT, DATAIO, SELECTPORT, SELECTIO

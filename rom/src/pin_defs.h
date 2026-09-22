@@ -18,6 +18,8 @@ const uint8_t RW_READ = 1;
 const uint8_t RW_WRITE = 0;
 const uint8_t BE_ACTIVE = 1;
 const uint8_t BE_INACTIVE = 0;
+const uint8_t READY_HALT = 0;
+const uint8_t READY_GO = 1;
 
 // 47 - 40 D7 - D0
 // 0 - 15 A0 - A15

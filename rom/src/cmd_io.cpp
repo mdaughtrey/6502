@@ -81,17 +81,17 @@ namespace cmd_io
         gpio_pull_up(PIN_NMI);
         gpio_pull_up(PIN_RW);
 
-        uint64_t mask = RESET_MASK | CLOCK_MASK | PHI0_MASK | BE_MASK | NMI_MASK | RW_MASK;
+        uint64_t mask = RESET_MASK | CLOCK_MASK | PHI0_MASK | BE_MASK | NMI_MASK | RW_MASK | READY_MASK;
         VERBOSE("cmd_init_buses: Pin initialization mask is %s", std::bitset<64>(mask).to_string().c_str());
         for (auto ii = 0; ii < 64; ii++)
         {
             if (mask & (1ull<<ii))
             {
+                VERBOSE("cmd_init_busses: pin %u", ii);
                 gpio_set_dir(ii, GPIO_OUT);
                 gpio_put(ii, 1);
             }
         }
-//        gpio_put(PIN_BUS_ENABLE, BE_ACTIVE);
         return false;
     }
 
@@ -100,6 +100,7 @@ namespace cmd_io
         uint16_t address;
         if (pio_break::is_break(address))
         {
+            printf("cmd_io loop: break %04x asserted\r\n", address);
             set_clock_frequency(0.0);
             pio_break::clear();
             // the PIO is waiting to release READY, send it data to trigger
@@ -318,12 +319,13 @@ namespace cmd_io
             return;
         }
 
-        sprintf(buffer, "     Data          Addr                   Data     SRRni r. B     C           AddrH    AddrL");
+        sprintf(buffer, "                                                      ~~ ~");
         log_queue::log(buffer);
-        sprintf(buffer, ".... ..    .. .... .... ........ ........ ........ YYWIQ.S. e.....K. ........ FEDCBA98 76543210");
+        sprintf(buffer, "     Data          Addr                   Data     S..ni r  B     C       WR  AddrH    AddrL");
         log_queue::log(buffer);
-//        uint64_t pins = sio_hw->gpio_in | ((uint64_t)sio_hw->gpio_hi_in << 32);
-        uint64_t mask = (static_cast<uint64_t>(sio_hw->gpio_hi_oe) << 32) | static_cast<uint64_t>(sio_hw->gpio_oe);
+        sprintf(buffer, ".... ..    .. .... .... ........ ........ ........ Y..IQ.S. E.....K. .....EY. FEDCBA98 76543210");
+        log_queue::log(buffer);
+        uint64_t mask = gpioc_hilo_oe_get();
         sprintf(buffer, "%04x %02x    %02x %04x %04x %s %s %s %s %s %s %s %s <- Data",
             static_cast<uint16_t>(pins >> 48), static_cast<uint8_t>(pins >> 40), static_cast<uint8_t>(pins >> 32),
             static_cast<uint16_t>(pins >> 16), static_cast<uint16_t>(pins), 
@@ -386,10 +388,10 @@ namespace cmd_io
         cancel_repeating_timer(&pin_toggle_timer);
         VERBOSE("Assert Reset, 3 Cycles");
         gpio_put(PIN_RESET, 0);
-        run_x_clock_cycles(3);
+        run_x_clock_cycles(4);
         VERBOSE("Deassert Reset, 7 Cycles");
         gpio_put(PIN_RESET, 1);
-        run_x_clock_cycles(7);
+        run_x_clock_cycles(10);
         return false;
     }
 
@@ -686,6 +688,23 @@ namespace cmd_io
         return false;
     }
 
+    bool cmd_toggle_pin_max(CommandInput input = CommandInput())
+    {
+        if (input.empty())
+        {
+            return true;
+        }
+        pin_toggle_number = std::stoi(input[1]);
+        gpio_init(pin_toggle_number);
+        gpio_set_dir(pin_toggle_number, GPIO_OUT);
+        while (1)
+        {
+            gpio_put(pin_toggle_number, 0);
+            gpio_put(pin_toggle_number, 1);
+        }
+        return false;
+    }
+
 //    bool cmd_run(CommandInput input = CommandInput())
 //    {
 //        set_clock_frequency(100.0);
@@ -717,6 +736,7 @@ namespace cmd_io
         set_clock_frequency(0.0);
 //        breakpoints.clear();
         init();
+        pio_break::cmd_debug_mode_init(CommandInput());
         return false;
     }
 

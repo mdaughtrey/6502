@@ -1,51 +1,29 @@
 .program break
-.side_set 1 opt pindirs
+.side_set 1 
 
+.wrap_target
 load_match:
-    pull block                ; wait for match data
-    mov x, osr                ; x <- OSR
+    set pindirs, 1       side 1     ; make READY an output, start high
+    pull block          side 1                ; wait for match data
+    mov x, osr          side 1       ; x <- OSR
 wait_for_match:
-    mov y, pins               ; load pins without touching READY
-    jmp x!=y, wait_for_match  ; loop while no match
+    mov y, pins         side 1      ; load pins without touching READY
+    jmp x!=y, wait_for_match side 1  ; loop while no match
 
     ; --- match detected
-    ; assert READY low
-    ; Push address to 
-    ; raise IRQ (nowait)
-    mov isr, y
-    push noblock              ; send our address
-    irq nowait 0 side 0       ; drive READY and raise IRQ, nowait
+    mov isr, y          side 1
+    push noblock        side 1      ; send our address
+    irq nowait 0        side 0      ; drive READY and raise IRQ, nowait
 
 hold_until_ack:
-    pull block                ; wait for the host to turn off the clock
-    mov isr, osr
-    nop side 1                ; then we wake and release READY
-    push block                ; signal that we've released
+    pull block          side 0      ; wait for the host to turn off the clock
+    mov isr, osr        side 0
+    nop                 side 1      ; then we wake and release READY
+    push block          side 1      ; signal that we've released
 
 
 hold_while_match:
-    mov x, pins              ; now wait until the pins don't match so we
-    jmp x!=y, load_match    ; dont just trigger the IRQ again
-    jmp hold_while_match
-
-
-; load_match:
-;     pull block                ; wait for match data
-;     mov x, osr                ; x <- OSR
-; wait_for_match:
-;     mov y, pins               ; load pins without touching READY
-;     jmp x!=y, wait_for_match  ; loop while no match
-;     ; --- match detected
-;     irq nowait 0 side 0       ; drive READY and raise IRQ, nowait
-;                               ; ... to let GPIO get to the address pins
-; hold_ready_until_cpu_ack:
-;     mov y, pins               ; keep sampling pins
-;     jmp pin, release_ready    ; CPU clears IRQ → pin flag becomes true
-;     jmp hold_ready_until_cpu_ack
-; 
-; release_ready:
-;     nop side 1                ; release READY (high-Z)
-; hold_while_match:
-;     mov y, pins
-;     jmp x!=y, wait_for_match  ; when address changes, restart match search
-;     jmp hold_while_match
+    mov x, pins         side 1      ; now wait until the pins don't match so we
+    jmp x!=y, load_match side 1   ; dont just trigger the IRQ again
+    jmp hold_while_match side 1
+.wrap

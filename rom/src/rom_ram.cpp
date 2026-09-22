@@ -29,7 +29,7 @@ namespace rom_ram
         uint8_t code[256];
     } Program;
 
-    uint32_t rw_delay_us = 0;
+    uint32_t rw_delay_us = 1;
 
 //    const uint16_t RR_ROM_BASE = 0x8000;
 //    const uint16_t RR_ROM_SIZE = 0x8000;
@@ -286,44 +286,31 @@ namespace rom_ram
         return false;
     }
 
-    bool cmd_memory_test(CommandInput input = CommandInput())
-    {
-        uint8_t rom_image[65536];
-        printf("Uploading test image...");
-        for (auto ii = 0; ii < 65536; ii++)
-        {
-            rom_image[ii] = ii % 256;
-        }
-        write_memory(rom_image, 65536, 0x0000);
-        std::vector<uint8_t> ram_image = read_memory(0, 65536);
-        for (auto ii = 0; ii < 65536; ii++)
-        {
-            if (ram_image[ii] != ii % 256)
-            {
-                printf("Failed %04x: ROM %02x RAM %02x\r\n", ii, ii % 256, ram_image[ii]);
-            }
-        }
-        return false;
-    }
+//    bool cmd_memory_test(CommandInput input = CommandInput())
+//    {
+//        uint8_t rom_image[65536];
+//        printf("Uploading test image...");
+//        for (auto ii = 0; ii < 0x0200; ii++)
+//        {
+//            rom_image[ii] = ii % 256;
+//        }
+//        write_memory(rom_image, 0x0200, 0);
+//        for (auto ii = 0x0300; ii < 65536; ii++)
+//        {
+//            rom_image[ii] = ii % 256;
+//        }
+//        write_memory(rom_image, 0xffff-0x0300, 0x0300);
+//        std::vector<uint8_t> ram_image = read_memory(0, 65536);
+//        for (auto ii = 0; ii < 65536; ii++)
+//        {
+//            if (ram_image[ii] != ii % 256)
+//            {
+//                printf("Failed %04x: ROM %02x RAM %02x\r\n", ii, ii % 256, ram_image[ii]);
+//            }
+//        }
+//        return false;
+//    }
 
-    bool cmd_memory_test_slow(CommandInput input = CommandInput())
-    {
-        for (auto ii = 0; ii < 65536; ii++)
-        {
-            uint8_t data(ii % 256);;
-            printf("Write to %04x\r\n", ii);
-            write_memory(&data, 1, ii);
-            std::vector<uint8_t> got_back(read_memory(ii, 1));
-            printf("Read %02x from  %04x\r\n", got_back[0], ii);
-            if (got_back[0] != ii % 256)
-            {
-                printf("Failed %04x: got back %02x\r\n", ii, got_back[0]);
-            }
-        }
-        printf("Complete\r\n");
-        return false;
-    }
-    
 
     bool cmd_write_memory(CommandInput input = CommandInput())
     {
@@ -355,15 +342,15 @@ namespace rom_ram
             rom_image[ii] = flood;
         }
         write_memory(rom_image, 65536, 0x0000);
-        printf("Verifying...\r\n");
-        std::vector<uint8_t> ram_image = read_memory(0, 65536);
-        for (auto ii = 0; ii < 65536; ii++)
-        {
-            if (ram_image[ii] != flood)
-            {
-                printf("Failed %04x: %02x\r\n", ii, ram_image[ii]);
-            }
-        }
+//        printf("Verifying...\r\n");
+//        std::vector<uint8_t> ram_image = read_memory(0, 65536);
+//        for (auto ii = 0; ii < 65536; ii++)
+//        {
+//            if (ram_image[ii] != flood)
+//            {
+//                printf("Failed %04x: %02x\r\n", ii, ram_image[ii]);
+//            }
+//        }
         printf("Complete\r\n");
         return false;
     }

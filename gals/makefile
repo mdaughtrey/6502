@@ -1,4 +1,4 @@
-FILE=level_shifter
+FILE=ram_via_selector
 GALETTE=~/dev/6502/galette/Cargo.toml
 
 build:

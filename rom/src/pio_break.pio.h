@@ -13,32 +13,33 @@
 // ----- //
 
 #define break_wrap_target 0
-#define break_wrap 13
+#define break_wrap 14
 #define break_pio_version 1
 
 static const uint16_t break_program_instructions[] = {
             //     .wrap_target
-    0x80a0, //  0: pull   block
-    0xa027, //  1: mov    x, osr
-    0xa040, //  2: mov    y, pins
-    0x00a2, //  3: jmp    x != y, 2
-    0xa0c2, //  4: mov    isr, y
-    0x8000, //  5: push   noblock
-    0xd000, //  6: irq    nowait 0        side 0
-    0x80a0, //  7: pull   block
-    0xa0c7, //  8: mov    isr, osr
-    0xb842, //  9: nop                    side 1
-    0x8020, // 10: push   block
-    0xa020, // 11: mov    x, pins
-    0x00a0, // 12: jmp    x != y, 0
-    0x000b, // 13: jmp    11
+    0xf081, //  0: set    pindirs, 1      side 1
+    0x90a0, //  1: pull   block           side 1
+    0xb027, //  2: mov    x, osr          side 1
+    0xb040, //  3: mov    y, pins         side 1
+    0x10a3, //  4: jmp    x != y, 3       side 1
+    0xb0c2, //  5: mov    isr, y          side 1
+    0x9000, //  6: push   noblock         side 1
+    0xc000, //  7: irq    nowait 0        side 0
+    0x80a0, //  8: pull   block           side 0
+    0xa0c7, //  9: mov    isr, osr        side 0
+    0xb042, // 10: nop                    side 1
+    0x9020, // 11: push   block           side 1
+    0xb020, // 12: mov    x, pins         side 1
+    0x10a0, // 13: jmp    x != y, 0       side 1
+    0x100c, // 14: jmp    12              side 1
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program break_program = {
     .instructions = break_program_instructions,
-    .length = 14,
+    .length = 15,
     .origin = -1,
     .pio_version = break_pio_version,
 #if PICO_PIO_VERSION > 0
@@ -49,7 +50,7 @@ static const struct pio_program break_program = {
 static inline pio_sm_config break_program_get_default_config(uint offset) {
     pio_sm_config c = pio_get_default_sm_config();
     sm_config_set_wrap(&c, offset + break_wrap_target, offset + break_wrap);
-    sm_config_set_sideset(&c, 2, true, true);
+    sm_config_set_sideset(&c, 1, false, false);
     return c;
 }
 #endif

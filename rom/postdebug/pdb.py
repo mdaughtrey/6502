@@ -23,6 +23,7 @@ LST_LINE_RE = re.compile(
     r"^(?P<offset>[0-9A-F]{6})r\s+\d+\s+(?P<bytes>(?:[0-9A-F]{2}|rr|xx)(?:\s+(?:[0-9A-F]{2}|rr|xx))*)\s+(?P<text>.+)$"
 )
 LST_LABEL_RE = re.compile(r"^(?P<offset>[0-9A-F]{6})r\s+\d+\s+(?P<label>[A-Za-z_@.][\w@.]*)[:]\s*(?P<text>.*)$")
+BINARY_OCTET_RE = re.compile(r"\b[01]{8}\b")
 
 
 def build_segment_ranges(segment_starts: dict[str, int | None]) -> list[tuple[int, int, str]]:
@@ -68,10 +69,28 @@ def format_pinstatus(pins: str, segment_name: str | None = None) -> str:
     )
 
 
+def parse_alternate_data_line(line: str) -> str | None:
+    stripped = line.strip()
+    if not stripped.endswith("<- Data"):
+        return None
+
+    payload_text = stripped[: stripped.rfind("<-")]
+    octets = BINARY_OCTET_RE.findall(payload_text)
+    if len(octets) != 8:
+        return None
+
+    bits = "".join(octets)
+    return f"{int(bits, 2):016x}"
+
+
 def render_screenlog_line(line: str) -> str:
     stripped = line.strip()
     if not stripped:
         return ""
+
+    alternate_pins = parse_alternate_data_line(line)
+    if alternate_pins is not None:
+        return format_pinstatus(alternate_pins)
 
     if stripped.startswith("{"):
         try:
@@ -380,6 +399,18 @@ def render_screenlog_with_lookup(
         stripped = raw_line.strip()
         if not stripped:
             typer.echo()
+            continue
+
+        alternate_pins = parse_alternate_data_line(raw_line)
+        if alternate_pins is not None:
+            last_disassembly_address = render_pinstatus(
+                {"pins": alternate_pins},
+                disassembly,
+                labels,
+                routine_starts,
+                segment_ranges,
+                last_disassembly_address,
+            )
             continue
 
         if stripped.startswith("{"):

@@ -13,23 +13,22 @@ public:
 class PinScopeBusEnable
 {
 public:
+    bool bus_active;
     PinScopeBusEnable();
     ~PinScopeBusEnable();
 };
 
-class PinScopeAddressWrite
+class PinScopeAddressWrite : public PinScopeBusEnable
 {
     uint64_t mask;
-    bool bus_active;
 public:
     PinScopeAddressWrite();
     ~PinScopeAddressWrite();
 };
 
-class PinScopeAddressRead
+class PinScopeAddressRead : public PinScopeBusEnable
 {
     uint64_t mask;
-    bool bus_active;
 public:
     PinScopeAddressRead();
     ~PinScopeAddressRead();

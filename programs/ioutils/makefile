@@ -8,6 +8,7 @@ $(PROJECT): $(OBJS)
 	ld65 --dbgfile rom1.dbg -C ${PROJECT}.cfg --mapfile $(PROJECT).map -o $(PROJECT).bin $(OBJS)
 	xxd -i rom1.bin > ${PROJECT}.h
 	cp ${PROJECT}.h ../../rom/src
+	cd fullmap && poetry run fullmap ~/dev/6502/programs/ioutils && cd ..
 
 %.o: %.asm
 	ca65 --verbose -g --cpu 65c02 --listing $(<).lst -o $@ $<

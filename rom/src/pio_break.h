@@ -6,6 +6,7 @@
 namespace pio_break
 {
     void init();
+    bool cmd_debug_mode_init(CommandInput);
     bool cmd_set(CommandInput);
     bool cmd_clear(CommandInput);
     bool cmd_disable(CommandInput);

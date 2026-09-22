@@ -38,6 +38,7 @@ namespace cmd_io
     void cmd_verbose_logging(bool);
     void set_address_bus_out(bool);
     bool cmd_toggle_pin_10hz(CommandInput);
+    bool cmd_toggle_pin_max(CommandInput);
 //    bool cmd_test_io_pins(CommandInput);
     bool cmd_run(CommandInput);
     bool cmd_upload_rom_image(CommandInput);

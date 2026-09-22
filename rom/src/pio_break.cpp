@@ -38,17 +38,20 @@ namespace pio_break
 
     void isr(void)
     {
+        printf("Start ISR ");
         pio_interrupt_clear(pio, 0); // Release the IRQ, PIO program cycles
-        VERBOSE("pio_break ISR");
+//        VERBOSE("pio_break ISR");
         for (auto & iter : breakpoints)
         {
             while (!pio_sm_is_rx_fifo_empty(pio, iter.sm))
             {
       		    pio_sm_get(pio, iter.sm);
+                printf("Setting %04x Trigger\r\n", iter.address);
                 iter.triggered = true;
 // static inline void pio_sm_set_enabled(PIO pio, uint sm, bool enabled) {
             }
         }
+        printf("End ISR\r\n");
     }
 
     bool is_break(uint16_t & address)
@@ -72,21 +75,24 @@ namespace pio_break
 
     void init()
     {
+    }
+
+    bool cmd_debug_mode_init(CommandInput input = CommandInput())
+    {
         breakpoints.clear();
         offset = pio_add_program(pio, &break_program);
         smc =  break_program_get_default_config(offset);
-        sm_config_set_in_pins(&smc, 0);
-        sm_config_set_in_pin_count(&smc, 16);
-        sm_config_set_sideset_pins(&smc, PIN_READY);
+        sm_config_set_in_pins(&smc, 0);                     // Base input range GPIO0 (A0)
+        sm_config_set_in_pin_count(&smc, 16);               // Range 16 pins (A0-A15)
+        sm_config_set_sideset_pins(&smc, PIN_READY);        // Sideset PIN_READY
         sm_config_set_out_shift(&smc, false, false, 16);    // autopull disabled
-        sm_config_set_in_shift(&smc, false, false, 16);      // autopush disabled
+        sm_config_set_in_shift(&smc, false, false, 16);     // autopush disabled
         sm_config_set_jmp_pin(&smc, PIO1_IRQ_0);
-        pio_gpio_init(pio, PIN_READY);
-//        assert_ready(false);
-        irq_set_exclusive_handler(PIO1_IRQ_0, isr);
 
+        irq_set_exclusive_handler(PIO1_IRQ_0, isr);         // Link up the ISR
         pio_set_irq0_source_enabled(pio, pis_interrupt0, true);
-        irq_set_enabled(PIO1_IRQ_0, true);
+        irq_set_enabled(PIO2_IRQ_0, true);
+        return false;
     }
     
     bool cmd_set(CommandInput input = CommandInput())
@@ -116,8 +122,10 @@ namespace pio_break
         VERBOSE("Adding breakpoint at %04x", address);
         int sm = pio_claim_unused_sm(pio, true);
         VERBOSE("sm %d", sm);
-        pio_sm_init(pio, sm, offset, &smc);
-        pio_sm_set_pins_with_mask(pio, sm, 0, 1u << PIN_READY);
+//        pio_gpio_init(pio, PIN_READY);              // Put PIN_READY under PIO Control
+        pio_sm_set_consecutive_pindirs(pio, sm, PIN_READY, 1, true);        // Set PIN_READY to OUTPUT
+        pio_sm_set_pins_with_mask(pio, sm, 0, 1u << PIN_READY);             // Set PIN_READY HIGH
+        pio_sm_init(pio, sm, offset, &smc);              // This jumps into safe_idle_offset
         pio_sm_set_enabled(pio, sm, true);
         pio_sm_put_blocking(pio, sm, address);
         breakpoints.push_back({address, true, false, sm});   

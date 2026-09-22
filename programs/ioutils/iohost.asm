@@ -1,6 +1,8 @@
 .include "global_defs.inc"
+.include "via6522_import.inc"
 
 .SEGMENT "IOHOST"
+
 LIO_SIGNALS: .byte 0        ; Local I/O signals
 ; STATUS_BITS for use in the SIGNAL regs
 TOHOST_READY = %10000000
@@ -19,6 +21,10 @@ HIO_HEAD: .byte 0       ; Host I/O buffer head index
 HIO_BUFFER: .res 8    ; Host I/O buffer, for data from the host
 BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
 
+STATUS: .byte 0
+; 00000001 loop
+; 00000010 rxloop empty
+; 00000100 rxloop not empty
 
 .SEGMENT "CODE"
 
@@ -102,10 +108,16 @@ BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
     and #~FROMHOST_READY & $ff
     sta HIO_SIGNALS     ; Clear FROMHOST_READY to indicate we've read the byte
 @not_empty:
+    lda STATUS
+    eor #%00000100
+    sta STATUS
     tya
     sec
     rts
 @buffer_empty:
+    lda STATUS
+    eor #%00000010
+    sta STATUS
     clc
     rts
 .endproc
@@ -136,11 +148,16 @@ BUFFER_MASK = %00000111 ; Mask for buffer indices (modulo 8)
 .proc iohost_loop
 ;    jsr iohost_tx_drain
 ;    lda #'M'
+    lda STATUS
+    eor #%00000001
+    sta STATUS
 
     jsr iohost_rx
     bcc @no_data
     jsr iohost_tx
 @no_data:
+    lda STATUS
+    jsr via6522_set_porta
     rts
 .endproc
 

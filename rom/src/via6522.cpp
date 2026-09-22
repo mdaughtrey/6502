@@ -9,6 +9,7 @@
 #include "hardware/pwm.h"
 #include "types.h"
 #include "via6522.h"
+#include "log_queue.h"
 
 #include "common_defs.h"
 #include "rom_ram_internal.h"
@@ -74,7 +75,7 @@ std::string acr_decode(uint8_t data)
     return register_decode(data, names);
 }
 
-const uint16_t IOBASE = 0x4000;
+const uint16_t IOBASE = 0x0200;
 Register registers[] = {
     { "ORBIRB", IOBASE, default_decode },
     { "ORAIRA", IOBASE + 1, default_decode },
@@ -135,7 +136,7 @@ Register registers[] = {
         for (uint8_t ii = 0; ii < 16; ii++)
         {
             char buffer[128];
-            sprintf(buffer, "%8s %s", registers[ii].name, registers[ii].decode(rdata[ii]).c_str());
+            sprintf(buffer, "%04x %8s %s", IOBASE+ii, registers[ii].name, registers[ii].decode(rdata[ii]).c_str());
             log_queue.push_back(buffer);
         }
         return false;
@@ -158,7 +159,7 @@ Register registers[] = {
         }
         uint8_t regindex = std::stoi(input[1], nullptr, 16);
         uint8_t data = std::stoi(input[2], nullptr, 16);
-        printf("regindex %02x data %02x\r\n", regindex, data);
+        VERBOSE("regindex %02x data %02x\r\n", regindex, data);
         rom_ram::write_memory(&data, 1, IOBASE + regindex);
         return false;
     }
